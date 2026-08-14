@@ -1,0 +1,1179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Cycle7 Pro | Wealth Flow App</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        slate: { 850: '#1e293b', 900: '#0f172a', 950: '#020617' },
+                        money: { green: '#10B981', red: '#F43F5E', blue: '#3B82F6', gold: '#F59E0B' }
+                    },
+                    fontFamily: { sans: ['Inter', 'sans-serif'], mono: ['JetBrains Mono', 'monospace'] }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { background-color: #0f172a; color: #f8fafc; font-family: 'Inter', sans-serif; -webkit-tap-highlight-color: transparent; }
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-track { background: #0f172a; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+        
+        /* Input Styling */
+        .fin-input { 
+            background-color: #0f172a; border: 1px solid #334155; color: white; transition: all 0.2s;
+            font-variant-numeric: tabular-nums;
+        }
+        .fin-input:focus { outline: none; border-color: #10B981; box-shadow: 0 0 0 1px rgba(16, 185, 129, 0.2); }
+        
+        /* Dragging */
+        .sortable-ghost { opacity: 0.4; background: #334155; }
+        .sortable-drag { cursor: grabbing; opacity: 1; background: #1e293b; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5); transform: scale(1.02); }
+        .drag-handle { cursor: grab; touch-action: none; }
+
+        .tab-active { color: #10B981; border-bottom: 2px solid #10B981; }
+        .tab-inactive { color: #64748b; border-bottom: 2px solid transparent; }
+        
+        /* Chart Labels */
+        .chart-label { font-size: 10px; fill: #94a3b8; font-family: 'JetBrains Mono', monospace; }
+        .chart-val { font-size: 10px; font-weight: bold; fill: #fff; text-anchor: middle; }
+
+        /* Custom Modal Animations */
+        .modal-backdrop { background-color: rgba(2, 6, 23, 0.75); backdrop-filter: blur(4px); }
+        .animate-pop { animation: popIn 0.2s ease-out forwards; }
+        @keyframes popIn {
+            0% { transform: scale(0.95); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+    </style>
+</head>
+<body class="flex flex-col h-screen max-w-md mx-auto border-x border-slate-800 shadow-2xl overflow-hidden text-sm relative">
+
+    <!-- Header -->
+    <header class="px-4 py-3 bg-slate-900/90 backdrop-blur-md border-b border-slate-800 sticky top-0 z-40 flex justify-between items-center">
+        <div class="flex items-center gap-2">
+            <h1 class="text-base font-bold tracking-tight text-white flex items-center gap-2">
+                <i class="fas fa-chart-pie text-money-green"></i> Cycle<span class="text-slate-400">7</span> <span class="text-[10px] bg-slate-800 text-slate-400 px-1.5 py-0.5 rounded border border-slate-700">PRO</span>
+            </h1>
+        </div>
+        <div class="flex items-center gap-1.5">
+            <button onclick="openHistoryModal()" class="text-[10px] bg-slate-800 hover:bg-slate-700 text-slate-300 px-2.5 py-1.5 rounded-lg border border-slate-700 transition flex items-center gap-1">
+                <i class="fas fa-history text-slate-400"></i> History
+            </button>
+            <button onclick="openExportModal()" class="text-[10px] bg-slate-800 hover:bg-slate-700 text-slate-300 px-2.5 py-1.5 rounded-lg border border-slate-700 transition flex items-center gap-1">
+                <i class="fas fa-download text-slate-400"></i> Data
+            </button>
+            <button onclick="promptResetMonth()" class="text-[10px] bg-slate-800 hover:bg-slate-700 text-slate-300 px-2.5 py-1.5 rounded-lg border border-slate-700 transition flex items-center gap-1">
+                <i class="fas fa-redo-alt text-money-gold"></i> Reset
+            </button>
+        </div>
+    </header>
+
+    <!-- Navigation Tabs -->
+    <nav class="flex justify-between bg-slate-950 border-b border-slate-800 text-[10px] font-bold uppercase tracking-wide">
+        <button onclick="switchTab('dashboard')" id="tab-dashboard" class="flex-1 py-3 tab-active transition-colors">Overview</button>
+        <button onclick="switchTab('accounts')" id="tab-accounts" class="flex-1 py-3 tab-inactive transition-colors">Accounts</button>
+        <button onclick="switchTab('inputs')" id="tab-inputs" class="flex-1 py-3 tab-inactive transition-colors">Liabilities</button>
+        <button onclick="switchTab('cashflow')" id="tab-cashflow" class="flex-1 py-3 tab-inactive transition-colors">Cash Flow</button>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="flex-1 overflow-y-auto bg-slate-900 relative pb-20">
+
+        <!-- DASHBOARD TAB -->
+        <section id="view-dashboard" class="p-5 space-y-5 animate-fade-in">
+            
+            <!-- 1. Projected Surplus/Deficit Waterfall -->
+            <div class="bg-slate-800 rounded-xl border border-slate-700 shadow-lg overflow-hidden">
+                <div class="p-4 border-b border-slate-700/50 flex justify-between items-center">
+                    <div>
+                        <p class="text-[10px] text-slate-400 uppercase tracking-wider font-bold">Projected Outcome</p>
+                        <h2 id="dash-heading" class="text-xl font-bold text-white">Surplus</h2>
+                    </div>
+                    <div class="text-right">
+                        <span id="dash-surplus" class="text-2xl font-bold font-mono text-money-green">₹ 0</span>
+                    </div>
+                </div>
+                
+                <!-- Waterfall Chart Container -->
+                <div class="p-4 bg-slate-850 relative h-48 w-full" id="waterfall-container">
+                    <!-- SVG Injected via JS -->
+                </div>
+            </div>
+
+            <!-- 2. Liquidity Section -->
+            <div class="bg-slate-800/50 rounded-xl border border-slate-700/50 overflow-hidden">
+                <div class="p-4 bg-slate-800 border-b border-slate-700/50">
+                    <div class="flex justify-between items-center">
+                        <div class="flex items-center gap-2">
+                            <i class="fas fa-university text-money-gold text-xs"></i>
+                            <span class="text-xs font-bold text-slate-300 uppercase">Liquidity Position</span>
+                        </div>
+                        <span id="dash-liquidity" class="text-lg font-bold text-white font-mono">₹ 0</span>
+                    </div>
+                    <p class="text-[9px] text-slate-500 mt-1">Net Available (Total Balance - Earmarked)</p>
+                </div>
+                
+                <div class="p-4 space-y-4">
+                    <!-- Net Available Breakup -->
+                    <div>
+                        <p class="text-[9px] text-money-green uppercase font-bold mb-2">Available Balance Breakdown</p>
+                        <div class="space-y-1.5" id="dash-liquidity-list">
+                            <!-- Injected -->
+                        </div>
+                    </div>
+
+                    <!-- Earmarked Breakup -->
+                    <div>
+                        <div class="flex justify-between items-center mb-2 border-t border-slate-700 pt-2">
+                            <p class="text-[9px] text-slate-400 uppercase font-bold">Earmarked / Set Aside</p>
+                            <span id="dash-earmarked-total" class="text-xs font-mono text-slate-300">₹ 0</span>
+                        </div>
+                        <div class="space-y-1.5" id="dash-earmarked-list">
+                            <!-- Injected -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 3. Discretionary Spending & Gamification Widget -->
+            <div class="bg-slate-800 p-4 rounded-xl border border-slate-700 space-y-4">
+                <!-- Spend Overview & Streak -->
+                <div>
+                    <div class="flex justify-between items-center mb-2.5">
+                        <span class="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Spending Analysis</span>
+                        <div id="dash-streak-badge" class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-400 border border-amber-500/30 flex items-center gap-1.5">
+                            <i class="fas fa-fire text-amber-400"></i> <span id="dash-streak-count">0 Mo Streak</span>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div class="bg-slate-900/60 p-3 rounded-lg border border-slate-700/60 flex flex-col justify-between">
+                            <div>
+                                <p class="text-[9px] text-amber-400 uppercase font-bold flex items-center gap-1.5">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span> Discretionary
+                                </p>
+                                <p id="dash-disc-spend" class="text-base font-bold font-mono text-white mt-1">₹ 0</p>
+                            </div>
+                            <div class="mt-2 pt-1.5 border-t border-slate-800/80">
+                                <p id="dash-disc-delta" class="text-[9px] font-mono text-slate-400 leading-tight">-</p>
+                            </div>
+                        </div>
+                        <div class="bg-slate-900/60 p-3 rounded-lg border border-slate-700/60 flex flex-col justify-between">
+                            <div>
+                                <p class="text-[9px] text-blue-400 uppercase font-bold flex items-center gap-1.5">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-blue-400"></span> Non-Discretionary
+                                </p>
+                                <p id="dash-nondisc-spend" class="text-base font-bold font-mono text-white mt-1">₹ 0</p>
+                            </div>
+                            <div class="mt-2 pt-1.5 border-t border-slate-800/80">
+                                <p class="text-[9px] text-slate-500 leading-tight">Fixed & Essentials</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Milestone Badges -->
+                <div class="pt-2 border-t border-slate-700/50">
+                    <p class="text-[9px] text-slate-400 uppercase font-bold mb-2 tracking-wider">Milestones</p>
+                    <div class="grid grid-cols-3 gap-2" id="dash-badges">
+                        <!-- Badges injected via JS -->
+                    </div>
+                </div>
+            </div>
+
+        </section>
+
+        <!-- ACCOUNTS TAB -->
+        <section id="view-accounts" class="hidden p-5 space-y-6">
+            <!-- Instructions -->
+            <div class="bg-blue-900/20 border border-blue-900/50 p-3 rounded-lg text-xs text-blue-200">
+                <i class="fas fa-info-circle mr-1"></i> Liquidity = Balance - Earmarked.
+            </div>
+
+            <!-- Salary Input -->
+            <div class="bg-slate-800 p-4 rounded-xl border border-slate-700">
+                <h3 class="text-xs font-bold text-money-green uppercase mb-3"><i class="fas fa-money-bill-wave mr-1"></i> Monthly Inflow</h3>
+                <label class="text-[10px] text-slate-400 block mb-1">Total Salary Credited</label>
+                <input type="text" id="in-salary" class="fin-input w-full p-2 rounded text-sm font-mono" placeholder="0" 
+                    onfocus="unformat(this)" onblur="formatAndSave(this, 'salary')">
+            </div>
+
+            <!-- Bank Accounts List -->
+            <div>
+                <div class="flex justify-between items-center mb-3">
+                    <h3 class="text-xs font-bold text-money-gold uppercase"><i class="fas fa-landmark mr-1"></i> Bank Accounts</h3>
+                    <button onclick="addAccount()" class="text-[10px] bg-slate-800 border border-slate-600 hover:bg-slate-700 px-2.5 py-1 rounded-lg text-slate-300 transition">+ Add Bank</button>
+                </div>
+                <div id="accounts-container" class="space-y-4">
+                    <!-- Accounts injected here -->
+                </div>
+            </div>
+        </section>
+
+        <!-- LIABILITIES INPUTS TAB -->
+        <section id="view-inputs" class="hidden p-5 space-y-6">
+            <!-- Cash Burn Calculation -->
+            <div class="bg-slate-800/40 p-4 rounded-xl border border-slate-700/50">
+                <h3 class="text-xs font-bold text-slate-300 uppercase mb-3"><i class="fas fa-wallet mr-1"></i> Cash Spending</h3>
+                <div class="grid grid-cols-2 gap-3 mb-3">
+                    <div>
+                        <label class="text-[9px] text-slate-400 block mb-1 uppercase">Monthly Set Aside</label>
+                        <input type="text" class="fin-input w-full p-2 rounded text-xs font-mono" placeholder="0" 
+                            id="in-cash-budget" onfocus="unformat(this)" onblur="formatAndSave(this, 'cashBudget')">
+                    </div>
+                    <div>
+                        <label class="text-[9px] text-slate-400 block mb-1 uppercase">Current Balance</label>
+                        <input type="text" class="fin-input w-full p-2 rounded text-xs font-mono" placeholder="0" 
+                            id="in-cash-current" onfocus="unformat(this)" onblur="formatAndSave(this, 'cashCurrent')">
+                    </div>
+                </div>
+                <div class="flex justify-between items-center border-t border-slate-700/50 pt-2">
+                    <span class="text-[10px] text-slate-500 uppercase">Realized Cash Burn (Discretionary)</span>
+                    <span id="disp-cash-burn" class="text-sm font-bold text-money-red font-mono">₹ 0</span>
+                </div>
+            </div>
+
+            <!-- Credit Cards -->
+            <div>
+                <div class="flex justify-between items-center mb-3">
+                    <h3 class="text-xs font-bold text-money-red uppercase"><i class="fas fa-credit-card mr-1"></i> Credit Card Burn</h3>
+                    <button onclick="addCard()" class="text-[10px] bg-slate-800 border border-slate-600 hover:bg-slate-700 px-2.5 py-1 rounded-lg text-slate-300 transition">+ Add Card</button>
+                </div>
+                <div id="cards-container" class="space-y-3"></div>
+            </div>
+
+            <!-- Expenses -->
+            <div>
+                <div class="flex justify-between items-center mb-3">
+                    <h3 class="text-xs font-bold text-slate-300 uppercase"><i class="fas fa-file-invoice mr-1"></i> Fixed Expenses</h3>
+                    <button onclick="addExpense()" class="text-[10px] bg-slate-800 border border-slate-600 hover:bg-slate-700 px-2.5 py-1 rounded-lg text-slate-300 transition">+ Add</button>
+                </div>
+                <div id="expenses-container" class="space-y-2"></div>
+            </div>
+
+            <!-- IOUs -->
+            <div>
+                <div class="flex justify-between items-center mb-3">
+                    <h3 class="text-xs font-bold text-slate-300 uppercase"><i class="fas fa-users mr-1"></i> IOUs</h3>
+                    <button onclick="addIOU()" class="text-[10px] bg-slate-800 border border-slate-600 hover:bg-slate-700 px-2.5 py-1 rounded-lg text-slate-300 transition">+ Add</button>
+                </div>
+                <div id="ious-container" class="space-y-2"></div>
+            </div>
+        </section>
+
+        <!-- CASHFLOW TAB -->
+        <section id="view-cashflow" class="hidden h-full flex flex-col">
+            <div class="bg-slate-800 border-b border-slate-700 p-4 shrink-0 shadow-md z-10">
+                <div class="flex justify-between items-center">
+                    <div>
+                        <p class="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Pay Day Opening</p>
+                        <p class="text-[9px] text-slate-500">Liquidity + Salary</p>
+                    </div>
+                    <div class="text-right">
+                        <p id="cf-start-bal" class="text-xl font-bold text-money-green font-mono">₹ 0</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex-1 overflow-y-auto p-4 pb-24 bg-slate-900">
+                <p class="text-[10px] text-slate-500 text-center mb-4"><i class="fas fa-hand-pointer opacity-50"></i> Drag handle to prioritize cashflow</p>
+                <ul id="flow-list" class="space-y-3"></ul>
+                <div class="mt-8 p-4 border-t-2 border-dashed border-slate-700">
+                    <div class="flex justify-between items-end">
+                        <p class="text-xs text-slate-400 uppercase font-bold">Closing Balance</p>
+                        <p id="cf-end-bal" class="text-3xl font-bold font-mono">₹ 0</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- CUSTOM CONFIRMATION MODAL -->
+    <div id="confirm-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop">
+        <div class="bg-slate-900 border border-slate-700 w-full max-w-xs rounded-xl p-5 shadow-2xl animate-pop text-center space-y-4">
+            <div class="w-12 h-12 bg-amber-500/10 text-amber-500 rounded-full flex items-center justify-center mx-auto border border-amber-500/20 text-lg">
+                <i class="fas fa-redo-alt"></i>
+            </div>
+            <div>
+                <h3 class="text-base font-bold text-white">Reset for New Month?</h3>
+                <p class="text-xs text-slate-400 mt-1">This saves your discretionary metrics to history and clears card dues & cash burn. Account structures remain.</p>
+            </div>
+            <div class="flex gap-2 pt-2">
+                <button onclick="closeConfirmModal()" class="flex-1 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold border border-slate-700">Cancel</button>
+                <button onclick="executeResetMonth()" class="flex-1 py-2 rounded-lg bg-money-red hover:bg-rose-600 text-white text-xs font-bold shadow-lg shadow-rose-900/30">Confirm Reset</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- EDITABLE HISTORY MODAL -->
+    <div id="history-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop">
+        <div class="bg-slate-900 border border-slate-700 w-full max-w-sm rounded-xl p-4 shadow-2xl animate-pop space-y-3 max-h-[85vh] flex flex-col">
+            <div class="flex justify-between items-center border-b border-slate-800 pb-2.5">
+                <h3 class="text-xs font-bold text-white flex items-center gap-1.5 uppercase tracking-wider">
+                    <i class="fas fa-history text-money-blue"></i> Monthly History
+                </h3>
+                <div class="flex items-center gap-2">
+                    <button onclick="addHistoryRecord()" class="text-[10px] bg-slate-800 border border-slate-600 hover:bg-slate-700 px-2 py-1 rounded text-money-green font-bold transition flex items-center gap-1">
+                        <i class="fas fa-plus"></i> Add Record
+                    </button>
+                    <button onclick="closeHistoryModal()" class="text-slate-400 hover:text-white px-1"><i class="fas fa-times"></i></button>
+                </div>
+            </div>
+            <div id="history-list" class="flex-1 overflow-y-auto space-y-2.5 pr-1">
+                <!-- Injected via JS -->
+            </div>
+            <button onclick="closeHistoryModal()" class="w-full py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold rounded-lg border border-slate-700">Close</button>
+        </div>
+    </div>
+
+    <!-- EXPORT/IMPORT DATA MODAL -->
+    <div id="export-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop">
+        <div class="bg-slate-900 border border-slate-700 w-full max-w-sm rounded-xl p-5 shadow-2xl animate-pop space-y-4">
+            <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+                <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                    <i class="fas fa-database text-money-gold"></i> Backup & Data
+                </h3>
+                <button onclick="closeExportModal()" class="text-slate-400 hover:text-white"><i class="fas fa-times"></i></button>
+            </div>
+            <p class="text-xs text-slate-400">Copy your JSON data to backup or paste a previous JSON string to restore your state (includes full history & badges).</p>
+            <div>
+                <textarea id="data-json-area" class="fin-input w-full h-32 p-2 rounded text-[10px] font-mono resize-none focus:outline-none" placeholder="Paste data JSON here..."></textarea>
+            </div>
+            <div class="flex gap-2">
+                <button onclick="copyDataJSON()" class="flex-1 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold rounded-lg border border-slate-700 flex items-center justify-center gap-1.5">
+                    <i class="fas fa-copy text-money-blue"></i> Copy JSON
+                </button>
+                <button onclick="importDataJSON()" class="flex-1 py-2 bg-money-green/20 hover:bg-money-green/30 text-money-green text-xs font-bold rounded-lg border border-money-green/30 flex items-center justify-center gap-1.5">
+                    <i class="fas fa-file-import"></i> Restore Data
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- TOAST NOTIFICATION -->
+    <div id="toast" class="fixed bottom-5 left-1/2 -translate-x-1/2 z-50 bg-slate-800 text-white border border-slate-700 text-xs px-4 py-2 rounded-full shadow-2xl transition-all duration-300 opacity-0 pointer-events-none flex items-center gap-2">
+        <i id="toast-icon" class="fas fa-info-circle text-money-green"></i>
+        <span id="toast-msg">Saved</span>
+    </div>
+
+    <script>
+        // --- STATE MANAGEMENT ---
+        const defaultState = {
+            salary: 0,
+            cashBudget: 0,
+            cashCurrent: 0,
+            accounts: [
+                { 
+                    id: 'acc_1', 
+                    name: 'Main Savings', 
+                    balance: 0, 
+                    earmarks: [ { id: 'em_1', purpose: 'Emergency', amount: 0 } ] 
+                }
+            ],
+            cards: [
+                { id: 'kotak', name: 'Kotak Bank', icon: 'fa-university', color: 'border-l-money-red', out: 0, defer: 0, category: 'discretionary' },
+                { id: 'millennia', name: 'HDFC Millennia', icon: 'fa-star', color: 'border-l-money-blue', out: 0, defer: 0, category: 'discretionary' },
+                { id: 'hdfc_upi', name: 'HDFC UPI', icon: 'fa-qrcode', color: 'border-l-purple-500', out: 0, defer: 0, category: 'discretionary' },
+                { id: 'icici', name: 'ICICI Amazon', icon: 'fa-amazon', color: 'border-l-money-gold', out: 0, defer: 0, category: 'discretionary' }
+            ],
+            expenses: [ 
+                { id: 'exp_rent', name: 'Rent', amount: 0, category: 'non-discretionary' }, 
+                { id: 'exp_sip', name: 'SIP Investment', amount: 0, category: 'non-discretionary' } 
+            ],
+            ious: [],
+            flowOrder: []
+        };
+
+        let state = JSON.parse(JSON.stringify(defaultState));
+        let sortableInstance = null;
+
+        window.onload = function() { loadData(); renderAll(); };
+
+        function loadData() {
+            const stored = localStorage.getItem('cycle7_pro_v3_data');
+            if (stored) {
+                try {
+                    const loaded = JSON.parse(stored);
+                    if(loaded.accounts && loaded.accounts.length > 0 && typeof loaded.accounts[0].earmarked === 'number') {
+                        loaded.accounts = loaded.accounts.map(acc => ({
+                            ...acc,
+                            earmarks: [{ id: Date.now(), purpose: 'General', amount: acc.earmarked || 0 }]
+                        }));
+                    }
+                    state = { ...defaultState, ...loaded };
+                    if(!state.cards || state.cards.length === 0 || !state.cards[0].color) state.cards = defaultState.cards;
+                } catch(e) {
+                    state = JSON.parse(JSON.stringify(defaultState));
+                }
+            }
+
+            // Ensure category fields exist
+            if (state.cards) {
+                state.cards.forEach(c => { if (!c.category) c.category = 'discretionary'; });
+            }
+            if (state.expenses) {
+                state.expenses.forEach(e => { if (!e.category) e.category = 'discretionary'; });
+            }
+            syncBadges();
+        }
+
+        function saveData() {
+            localStorage.setItem('cycle7_pro_v3_data', JSON.stringify(state));
+            updateDashboardCalc();
+            renderCashflow();
+        }
+
+        function showToast(msg, icon = 'fa-check-circle') {
+            const toast = document.getElementById('toast');
+            document.getElementById('toast-msg').innerText = msg;
+            document.getElementById('toast-icon').className = `fas ${icon} text-money-green`;
+            toast.classList.remove('opacity-0', 'pointer-events-none');
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'pointer-events-none');
+            }, 2200);
+        }
+
+        // --- HISTORY & GAMIFICATION HELPERS ---
+        function getHistory() {
+            try { return JSON.parse(localStorage.getItem('cycle7_history')) || []; }
+            catch(e) { return []; }
+        }
+
+        function saveHistory(history) {
+            localStorage.setItem('cycle7_history', JSON.stringify(history));
+            syncBadges();
+            updateDashboardCalc();
+        }
+
+        function getBadges() {
+            try { return JSON.parse(localStorage.getItem('cycle7_badges')) || {}; }
+            catch(e) { return {}; }
+        }
+
+        function saveBadges(badges) {
+            localStorage.setItem('cycle7_badges', JSON.stringify(badges));
+        }
+
+        function syncBadges() {
+            const history = getHistory();
+            const badges = { first_cut: false, streak_3: false, cut_20: false };
+
+            let streak = 0;
+            let maxStreak = 0;
+
+            for (let i = 1; i < history.length; i++) {
+                const prev = history[i - 1].totalDiscretionarySpend;
+                const curr = history[i].totalDiscretionarySpend;
+
+                if (curr < prev) {
+                    badges.first_cut = true;
+                    streak++;
+                    if (streak > maxStreak) maxStreak = streak;
+                    if (prev > 0 && ((prev - curr) / prev) >= 0.20) {
+                        badges.cut_20 = true;
+                    }
+                } else {
+                    streak = 0;
+                }
+            }
+
+            if (maxStreak >= 3) {
+                badges.streak_3 = true;
+            }
+
+            saveBadges(badges);
+            return badges;
+        }
+
+        function calculateCurrentStreak(history) {
+            if (!history || history.length < 2) return 0;
+            let streak = 0;
+            for (let i = history.length - 1; i >= 1; i--) {
+                if (history[i].totalDiscretionarySpend < history[i - 1].totalDiscretionarySpend) {
+                    streak++;
+                } else {
+                    break;
+                }
+            }
+            return streak;
+        }
+
+        // --- HISTORY EDITING FUNCTIONS ---
+        function renderHistoryList() {
+            const list = document.getElementById('history-list');
+            const history = getHistory();
+            if(history.length === 0) {
+                list.innerHTML = `<div class="text-center py-8 text-slate-500 text-xs">No monthly snapshots logged yet.<br>Click "+ Add Record" or Reset at month-end.</div>`;
+                return;
+            }
+
+            list.innerHTML = history.map((h, idx) => `
+                <div class="bg-slate-800/80 p-3 rounded-lg border border-slate-700/60 space-y-2">
+                    <div class="flex justify-between items-center">
+                        <div class="flex items-center gap-1.5">
+                            <span class="text-[10px] text-slate-400 uppercase font-bold">Month:</span>
+                            <input type="text" class="bg-slate-900 border border-slate-700 text-xs text-white font-mono font-bold px-2 py-0.5 rounded w-24 focus:outline-none focus:border-money-green" 
+                                value="${h.month}" placeholder="YYYY-MM" onchange="updateHistoryRecord(${idx}, 'month', this.value)">
+                        </div>
+                        <button onclick="deleteHistoryRecord(${idx})" class="text-slate-500 hover:text-red-400 p-1 text-xs transition">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                    <div class="grid grid-cols-2 gap-2">
+                        <div>
+                            <label class="text-[9px] text-amber-400 uppercase font-bold block mb-0.5">Discretionary</label>
+                            <input type="text" class="fin-input w-full p-1.5 text-xs rounded font-mono" 
+                                value="${fmt(h.totalDiscretionarySpend)}" onfocus="unformat(this)" onblur="formatHistoryRecord(this, ${idx}, 'totalDiscretionarySpend')">
+                        </div>
+                        <div>
+                            <label class="text-[9px] text-blue-400 uppercase font-bold block mb-0.5">Non-Disc</label>
+                            <input type="text" class="fin-input w-full p-1.5 text-xs rounded font-mono" 
+                                value="${fmt(h.totalNonDiscretionarySpend)}" onfocus="unformat(this)" onblur="formatHistoryRecord(this, ${idx}, 'totalNonDiscretionarySpend')">
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function addHistoryRecord() {
+            let history = getHistory();
+            const now = new Date();
+            const monthStr = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0');
+            history.push({
+                month: monthStr,
+                totalDiscretionarySpend: 0,
+                totalNonDiscretionarySpend: 0
+            });
+            saveHistory(history);
+            renderHistoryList();
+            showToast("Record added", "fa-plus");
+        }
+
+        function updateHistoryRecord(idx, key, val) {
+            let history = getHistory();
+            if (!history[idx]) return;
+            if (key === 'month') {
+                history[idx].month = val;
+            }
+            saveHistory(history);
+            showToast("History updated");
+        }
+
+        function formatHistoryRecord(el, idx, key) {
+            const raw = parseFloat(el.value.replace(/,/g, '')) || 0;
+            el.value = fmt(raw);
+            let history = getHistory();
+            if (history[idx]) {
+                history[idx][key] = raw;
+                saveHistory(history);
+            }
+        }
+
+        function deleteHistoryRecord(idx) {
+            let history = getHistory();
+            history.splice(idx, 1);
+            saveHistory(history);
+            renderHistoryList();
+            showToast("Record removed", "fa-trash");
+        }
+
+        // --- MODAL CONTROLLERS ---
+        function promptResetMonth() {
+            document.getElementById('confirm-modal').classList.remove('hidden');
+        }
+
+        function closeConfirmModal() {
+            document.getElementById('confirm-modal').classList.add('hidden');
+        }
+
+        function executeResetMonth() {
+            closeConfirmModal();
+
+            // 1. Snapshot month spend metrics
+            const cashBurn = Math.max(0, (state.cashBudget || 0) - (state.cashCurrent || 0));
+            let discExp = 0, nonDiscExp = 0;
+            state.expenses.forEach(e => {
+                if ((e.category || 'discretionary') === 'non-discretionary') nonDiscExp += (e.amount || 0);
+                else discExp += (e.amount || 0);
+            });
+
+            let discCard = 0, nonDiscCard = 0;
+            state.cards.forEach(c => {
+                const due = Math.max(0, (c.out || 0) - (c.defer || 0));
+                if ((c.category || 'discretionary') === 'non-discretionary') nonDiscCard += due;
+                else discCard += due;
+            });
+
+            const totalDiscretionarySpend = discExp + discCard + cashBurn;
+            const totalNonDiscretionarySpend = nonDiscExp + nonDiscCard;
+
+            const now = new Date();
+            const monthStr = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0');
+
+            let history = getHistory();
+            history.push({
+                month: monthStr,
+                totalDiscretionarySpend,
+                totalNonDiscretionarySpend
+            });
+
+            if (history.length > 12) {
+                history = history.slice(history.length - 12);
+            }
+            saveHistory(history);
+
+            // 2. Clear variable balances
+            state.cards.forEach(c => { c.out = 0; c.defer = 0; });
+            state.cashCurrent = state.cashBudget; 
+            state.flowOrder = [];
+            saveData();
+            renderAll();
+            showToast("New month initialized!", "fa-redo-alt");
+        }
+
+        function openHistoryModal() {
+            renderHistoryList();
+            document.getElementById('history-modal').classList.remove('hidden');
+        }
+
+        function closeHistoryModal() {
+            document.getElementById('history-modal').classList.add('hidden');
+        }
+
+        function openExportModal() {
+            const exportPayload = {
+                data: state,
+                history: getHistory(),
+                badges: getBadges()
+            };
+            document.getElementById('data-json-area').value = JSON.stringify(exportPayload, null, 2);
+            document.getElementById('export-modal').classList.remove('hidden');
+        }
+
+        function closeExportModal() {
+            document.getElementById('export-modal').classList.add('hidden');
+        }
+
+        function copyDataJSON() {
+            const area = document.getElementById('data-json-area');
+            area.select();
+            try {
+                document.execCommand('copy');
+                showToast("Copied to clipboard!", "fa-copy");
+            } catch(e) {
+                showToast("Failed to copy", "fa-exclamation-circle");
+            }
+        }
+
+        function importDataJSON() {
+            const val = document.getElementById('data-json-area').value.trim();
+            if(!val) return;
+            try {
+                const parsed = JSON.parse(val);
+                if(parsed.data) {
+                    state = parsed.data;
+                    if(parsed.history) localStorage.setItem('cycle7_history', JSON.stringify(parsed.history));
+                    if(parsed.badges) localStorage.setItem('cycle7_badges', JSON.stringify(parsed.badges));
+                } else {
+                    state = parsed;
+                }
+                syncBadges();
+                saveData();
+                renderAll();
+                closeExportModal();
+                showToast("State & History restored!", "fa-check-circle");
+            } catch(e) {
+                showToast("Invalid JSON string", "fa-times-circle");
+            }
+        }
+
+        // --- FORMATTERS & UTILS ---
+        const IN = new Intl.NumberFormat('en-IN');
+        function fmt(num) { return isNaN(num) || num === '' ? '0' : IN.format(num); }
+        function unformat(el) { const val = el.value.replace(/,/g, ''); el.value = val === '0' ? '' : val; }
+        function formatAndSave(el, key) {
+            const raw = parseFloat(el.value.replace(/,/g, '')) || 0;
+            el.value = fmt(raw); state[key] = raw; saveData();
+            if(key === 'cashBudget' || key === 'cashCurrent') updateDashboardCalc();
+        }
+        function roundK(num) {
+            if(Math.abs(num) >= 100000) return (num/100000).toFixed(1) + 'L';
+            if(Math.abs(num) >= 1000) return (num/1000).toFixed(0) + 'k';
+            return num;
+        }
+
+        // --- RENDERERS ---
+
+        function renderAll() {
+            document.getElementById('in-salary').value = fmt(state.salary);
+            document.getElementById('in-cash-budget').value = fmt(state.cashBudget);
+            document.getElementById('in-cash-current').value = fmt(state.cashCurrent);
+
+            renderAccounts();
+            renderCards();
+            renderExpenses();
+            renderIOUs();
+            updateDashboardCalc();
+        }
+
+        // 1. ACCOUNTS (Nested Earmarks)
+        function renderAccounts() {
+            const con = document.getElementById('accounts-container');
+            con.innerHTML = '';
+            
+            state.accounts.forEach((acc, idx) => {
+                let earmarksHtml = '';
+                (acc.earmarks || []).forEach((em, eIdx) => {
+                    earmarksHtml += `
+                        <div class="flex gap-2 items-center mt-1">
+                            <input type="text" class="bg-slate-900 border border-slate-700 text-[10px] text-slate-300 w-24 p-1 rounded" 
+                                value="${em.purpose}" placeholder="Purpose" onchange="updateEarmark(${idx}, ${eIdx}, 'purpose', this.value)">
+                            <input type="text" class="fin-input w-20 p-1 text-[10px] text-right rounded font-mono" 
+                                value="${fmt(em.amount)}" onfocus="unformat(this)" onblur="formatEarmark(this, ${idx}, ${eIdx})">
+                            <button onclick="removeEarmark(${idx}, ${eIdx})" class="text-slate-600 hover:text-red-400"><i class="fas fa-times text-[10px]"></i></button>
+                        </div>
+                    `;
+                });
+
+                con.innerHTML += `
+                <div class="bg-slate-800 p-3 rounded-lg border border-slate-700">
+                    <div class="flex justify-between mb-2">
+                        <input type="text" class="bg-transparent text-sm font-bold text-white w-full focus:outline-none" 
+                            value="${acc.name}" placeholder="Bank Name" onchange="updateArr('accounts', ${idx}, 'name', this.value)">
+                        <button onclick="removeArr('accounts', ${idx})" class="text-slate-600 hover:text-red-400"><i class="fas fa-times"></i></button>
+                    </div>
+                    <div class="mb-3">
+                        <label class="text-[9px] text-slate-500 uppercase">Current Balance</label>
+                        <input type="text" class="fin-input w-full p-2 text-sm rounded font-mono" 
+                            value="${fmt(acc.balance)}" onfocus="unformat(this)" onblur="formatArr(this, 'accounts', ${idx}, 'balance')">
+                    </div>
+                    
+                    <div class="bg-slate-900/50 p-2 rounded border border-slate-700/50">
+                        <div class="flex justify-between items-center mb-1">
+                            <label class="text-[9px] text-slate-500 uppercase font-bold">Earmarked / Blocked</label>
+                            <button onclick="addEarmark(${idx})" class="text-[9px] text-money-blue hover:text-white">+ Add</button>
+                        </div>
+                        ${earmarksHtml}
+                    </div>
+                </div>`;
+            });
+        }
+
+        // 2. CARDS
+        function renderCards() {
+            const con = document.getElementById('cards-container');
+            con.innerHTML = '';
+            state.cards.forEach((card, idx) => {
+                const due = (card.out || 0) - (card.defer || 0);
+                const isNonDisc = card.category === 'non-discretionary';
+                con.innerHTML += `
+                <div class="bg-slate-800 p-3 rounded-lg border-l-4 ${card.color || 'border-l-money-blue'} shadow-sm">
+                    <div class="flex justify-between items-center mb-2">
+                        <div class="flex items-center gap-2">
+                            <button onclick="toggleCategory('cards', ${idx})" 
+                                class="text-[9px] font-bold px-2 py-0.5 rounded transition-colors ${isNonDisc ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30' : 'bg-amber-500/20 text-amber-400 border border-amber-500/30'}">
+                                ${isNonDisc ? 'NON-D' : 'DISC'}
+                            </button>
+                            <input type="text" class="bg-transparent font-bold text-sm text-slate-200 focus:outline-none w-32" value="${card.name}" 
+                                onchange="updateArr('cards', ${idx}, 'name', this.value)">
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span id="due-display-${idx}" class="text-xs font-mono font-bold ${due > 0 ? 'text-money-red' : 'text-slate-500'}">
+                                Due: ₹${fmt(due)}
+                            </span>
+                            <button onclick="removeArr('cards', ${idx})" class="text-slate-600 hover:text-red-400 text-xs"><i class="fas fa-times"></i></button>
+                        </div>
+                    </div>
+                    <div class="flex gap-3">
+                        <div class="flex-1">
+                            <label class="text-[9px] text-slate-500 uppercase">Outstanding</label>
+                            <input type="text" class="fin-input w-full p-1.5 text-xs rounded font-mono" 
+                                value="${fmt(card.out)}" onfocus="unformat(this)" onblur="formatCard(this, ${idx}, 'out')">
+                        </div>
+                        <div class="flex-1">
+                            <label class="text-[9px] text-slate-500 uppercase">Defer</label>
+                            <input type="text" class="fin-input w-full p-1.5 text-xs rounded text-slate-400 font-mono" 
+                                value="${fmt(card.defer)}" onfocus="unformat(this)" onblur="formatCard(this, ${idx}, 'defer')">
+                        </div>
+                    </div>
+                </div>`;
+            });
+        }
+
+        // 3. GENERIC RENDERERS
+        function renderExpenses() {
+            const con = document.getElementById('expenses-container');
+            con.innerHTML = '';
+            state.expenses.forEach((item, idx) => {
+                const isNonDisc = item.category === 'non-discretionary';
+                con.innerHTML += `
+                <div class="flex items-center gap-2 bg-slate-800 p-2 rounded border border-slate-700">
+                    <button onclick="toggleCategory('expenses', ${idx})" 
+                        class="text-[9px] font-bold px-2 py-1 rounded w-14 shrink-0 transition-colors ${isNonDisc ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30' : 'bg-amber-500/20 text-amber-400 border border-amber-500/30'}">
+                        ${isNonDisc ? 'NON-D' : 'DISC'}
+                    </button>
+                    <input type="text" class="bg-transparent text-sm text-white flex-1 min-w-0 focus:outline-none" value="${item.name}" 
+                        onchange="updateArr('expenses', ${idx}, 'name', this.value)">
+                    <input type="text" class="fin-input w-24 p-1 text-xs text-right rounded font-mono" 
+                        value="${fmt(item.amount)}" onfocus="unformat(this)" onblur="formatArr(this, 'expenses', ${idx}, 'amount')">
+                    <button onclick="removeArr('expenses', ${idx})" class="text-slate-600 hover:text-money-red px-1"><i class="fas fa-times"></i></button>
+                </div>`;
+            });
+        }
+
+        function renderIOUs() {
+            const con = document.getElementById('ious-container');
+            con.innerHTML = '';
+            state.ious.forEach((item, idx) => {
+                const isPay = item.type === 'pay';
+                con.innerHTML += `
+                <div class="flex items-center gap-2 bg-slate-800 p-2 rounded border border-slate-700">
+                     <button onclick="toggleIOU(${idx})" 
+                        class="text-[9px] font-bold px-2 py-1 rounded w-12 shrink-0 ${isPay ? 'bg-money-red/20 text-money-red' : 'bg-money-green/20 text-money-green'}">
+                        ${isPay ? 'GIVE' : 'GET'}
+                    </button>
+                    <input type="text" class="bg-transparent text-sm text-white flex-1 min-w-0 focus:outline-none" value="${item.name}" 
+                        onchange="updateArr('ious', ${idx}, 'name', this.value)">
+                    <input type="text" class="fin-input w-24 p-1 text-xs text-right rounded font-mono" 
+                        value="${fmt(item.amount)}" onfocus="unformat(this)" onblur="formatArr(this, 'ious', ${idx}, 'amount')">
+                    <button onclick="removeArr('ious', ${idx})" class="text-slate-600 hover:text-money-red px-1"><i class="fas fa-times"></i></button>
+                </div>`;
+            });
+        }
+
+        // --- UPDATERS ---
+        function toggleCategory(arrName, idx) {
+            const current = state[arrName][idx].category || 'discretionary';
+            state[arrName][idx].category = current === 'discretionary' ? 'non-discretionary' : 'discretionary';
+            saveData();
+            if (arrName === 'cards') renderCards();
+            if (arrName === 'expenses') renderExpenses();
+        }
+
+        function formatCard(el, idx, key) {
+            const val = parseFloat(el.value.replace(/,/g, '')) || 0;
+            el.value = fmt(val); state.cards[idx][key] = val;
+            const c = state.cards[idx];
+            const due = (c.out || 0) - (c.defer || 0);
+            const disp = document.getElementById(`due-display-${idx}`);
+            if(disp) {
+                disp.innerText = `Due: ₹${fmt(due)}`;
+                disp.className = `text-xs font-mono font-bold ${due > 0 ? 'text-money-red' : 'text-slate-500'}`;
+            }
+            saveData();
+        }
+
+        function formatArr(el, arrName, idx, key) {
+            const val = parseFloat(el.value.replace(/,/g, '')) || 0;
+            el.value = fmt(val); state[arrName][idx][key] = val; saveData();
+        }
+
+        function updateArr(arrName, idx, key, val) { state[arrName][idx][key] = val; saveData(); }
+
+        function removeArr(arrName, idx) { 
+            state[arrName].splice(idx, 1); 
+            saveData(); 
+            if(arrName==='accounts') renderAccounts(); 
+            else if(arrName==='cards') renderCards();
+            else if(arrName==='expenses') renderExpenses(); 
+            else renderIOUs(); 
+        }
+        
+        // Account Specifics
+        function addAccount() { state.accounts.push({ id: 'acc_'+Date.now(), name: 'New Bank', balance: 0, earmarks: [] }); renderAccounts(); saveData(); }
+        function addCard() { state.cards.push({ id: 'card_'+Date.now(), name: 'Card', icon: 'fa-credit-card', color: 'border-l-money-gold', out: 0, defer: 0, category: 'discretionary' }); renderCards(); saveData(); }
+        function addEarmark(accIdx) { state.accounts[accIdx].earmarks.push({ id: Date.now(), purpose: '', amount: 0 }); renderAccounts(); saveData(); }
+        function removeEarmark(accIdx, emIdx) { state.accounts[accIdx].earmarks.splice(emIdx, 1); renderAccounts(); saveData(); }
+        function updateEarmark(accIdx, emIdx, key, val) { state.accounts[accIdx].earmarks[emIdx][key] = val; saveData(); }
+        function formatEarmark(el, accIdx, emIdx) {
+            const val = parseFloat(el.value.replace(/,/g, '')) || 0;
+            el.value = fmt(val); state.accounts[accIdx].earmarks[emIdx].amount = val; saveData();
+        }
+
+        function addExpense() { state.expenses.push({ id: 'exp_'+Date.now(), name: '', amount: 0, category: 'discretionary' }); renderExpenses(); saveData(); }
+        function addIOU() { state.ious.push({ id: 'iou_'+Date.now(), name: '', amount: 0, type: 'pay' }); renderIOUs(); saveData(); }
+        function toggleIOU(idx) { state.ious[idx].type = state.ious[idx].type === 'pay' ? 'receive' : 'pay'; renderIOUs(); saveData(); }
+
+        // --- DASHBOARD CALCULATIONS & WATERFALL ---
+
+        function updateDashboardCalc() {
+            // 1. LIQUIDITY
+            let totalLiq = 0;
+            let totalEarmarked = 0;
+            let liqListHtml = '';
+            let emListHtml = '';
+
+            state.accounts.forEach(acc => {
+                let accEmTotal = 0;
+                (acc.earmarks || []).forEach(em => {
+                    accEmTotal += (em.amount || 0);
+                    if(em.amount > 0) {
+                        emListHtml += `<div class="flex justify-between text-[10px] text-slate-400">
+                            <span>${em.purpose} <span class="text-slate-600">(${acc.name})</span></span><span>₹${fmt(em.amount)}</span>
+                        </div>`;
+                    }
+                });
+                
+                const net = (acc.balance || 0) - accEmTotal;
+                totalLiq += net;
+                totalEarmarked += accEmTotal;
+                
+                liqListHtml += `<div class="flex justify-between text-[10px] text-slate-400"><span>${acc.name}</span><span class="${net < 0 ? 'text-money-red' : 'text-slate-300'}">₹${fmt(net)}</span></div>`;
+            });
+
+            document.getElementById('dash-liquidity').innerText = '₹ ' + fmt(totalLiq);
+            document.getElementById('dash-liquidity-list').innerHTML = liqListHtml || `<div class="text-[10px] text-slate-600">No active bank balances</div>`;
+            document.getElementById('dash-earmarked-total').innerText = '₹ ' + fmt(totalEarmarked);
+            document.getElementById('dash-earmarked-list').innerHTML = emListHtml || `<div class="text-[10px] text-slate-600">No earmarks added</div>`;
+
+            // 2. DISCRETIONARY & NON-DISCRETIONARY CALCULATION
+            const cashBurn = Math.max(0, (state.cashBudget || 0) - (state.cashCurrent || 0));
+            const dispCashBurn = document.getElementById('disp-cash-burn');
+            if (dispCashBurn) dispCashBurn.innerText = '₹ ' + fmt(cashBurn);
+
+            let cardBurn = 0;
+            let discCard = 0;
+            let nonDiscCard = 0;
+            state.cards.forEach(c => {
+                const due = Math.max(0, (c.out || 0) - (c.defer || 0));
+                cardBurn += due;
+                if ((c.category || 'discretionary') === 'non-discretionary') nonDiscCard += due;
+                else discCard += due;
+            });
+
+            let fixedExp = 0;
+            let discExp = 0;
+            let nonDiscExp = 0;
+            state.expenses.forEach(e => {
+                const amt = e.amount || 0;
+                fixedExp += amt;
+                if ((e.category || 'discretionary') === 'non-discretionary') nonDiscExp += amt;
+                else discExp += amt;
+            });
+
+            const totalDiscretionarySpend = discExp + discCard + cashBurn;
+            const totalNonDiscretionarySpend = nonDiscExp + nonDiscCard;
+
+            document.getElementById('dash-disc-spend').innerText = '₹ ' + fmt(totalDiscretionarySpend);
+            document.getElementById('dash-nondisc-spend').innerText = '₹ ' + fmt(totalNonDiscretionarySpend);
+
+            // Month-over-Month Delta & Badges
+            const history = getHistory();
+            const lastMonth = history.length > 0 ? history[history.length - 1] : null;
+
+            let deltaHtml = '';
+            if (lastMonth && typeof lastMonth.totalDiscretionarySpend === 'number') {
+                const prev = lastMonth.totalDiscretionarySpend;
+                const diff = totalDiscretionarySpend - prev;
+                if (prev === 0) {
+                    deltaHtml = diff === 0 
+                        ? `<span class="text-slate-400">Same as prev</span>` 
+                        : `<span class="text-money-red font-bold">▲ ₹${fmt(diff)}</span>`;
+                } else {
+                    const pct = Math.abs((diff / prev) * 100).toFixed(0);
+                    if (diff < 0) {
+                        deltaHtml = `<span class="text-money-green font-bold"><i class="fas fa-arrow-down text-[8px]"></i> ₹${fmt(Math.abs(diff))} (-${pct}%)</span> <span class="text-[8px] text-slate-500">vs prev</span>`;
+                    } else if (diff > 0) {
+                        deltaHtml = `<span class="text-money-red font-bold"><i class="fas fa-arrow-up text-[8px]"></i> ₹${fmt(diff)} (+${pct}%)</span> <span class="text-[8px] text-slate-500">vs prev</span>`;
+                    } else {
+                        deltaHtml = `<span class="text-slate-400 font-bold">₹0 (0%) vs prev</span>`;
+                    }
+                }
+            } else {
+                deltaHtml = `<span class="text-slate-500 italic">Baseline cycle</span>`;
+            }
+            document.getElementById('dash-disc-delta').innerHTML = deltaHtml;
+
+            // Streak & Milestone Badges
+            const badges = syncBadges();
+            const streak = calculateCurrentStreak(history);
+            document.getElementById('dash-streak-count').innerText = `${streak} Mo Streak`;
+
+            const badgeDefs = [
+                { id: 'first_cut', name: 'First Cut', icon: 'fa-scissors', desc: 'MoM spend drop' },
+                { id: 'streak_3', name: '3-Mo Streak', icon: 'fa-fire', desc: '3 drops in row' },
+                { id: 'cut_20', name: '20%+ Drop', icon: 'fa-bolt', desc: 'Cut 20%+ in month' }
+            ];
+
+            let badgesHtml = '';
+            badgeDefs.forEach(b => {
+                const unlocked = !!badges[b.id];
+                badgesHtml += `
+                    <div class="p-2 rounded-lg border text-center transition-all ${unlocked ? 'bg-amber-500/10 border-amber-500/30 text-amber-300 shadow-sm' : 'bg-slate-900/40 border-slate-800 text-slate-600 opacity-60'}">
+                        <div class="text-xs mb-1"><i class="fas ${b.icon} ${unlocked ? 'text-amber-400' : 'text-slate-600'}"></i></div>
+                        <p class="text-[9px] font-bold tracking-tight leading-tight">${b.name}</p>
+                        <p class="text-[7px] text-slate-500 mt-0.5 leading-none">${b.desc}</p>
+                    </div>
+                `;
+            });
+            document.getElementById('dash-badges').innerHTML = badgesHtml;
+
+            // 3. WATERFALL DATA & SVG
+            let iouNet = 0; 
+            state.ious.forEach(i => i.type === 'pay' ? iouNet += (i.amount || 0) : iouNet -= (i.amount || 0));
+            
+            // Formula: Salary -> Fixed -> Cards -> Cash Burn -> IOU -> Surplus
+            const salary = state.salary || 0;
+            const surplus = salary - fixedExp - cardBurn - cashBurn - iouNet;
+            
+            document.getElementById('dash-surplus').innerText = '₹ ' + fmt(surplus);
+            document.getElementById('dash-surplus').className = `text-2xl font-bold font-mono ${surplus >= 0 ? 'text-money-green' : 'text-money-red'}`;
+            document.getElementById('dash-heading').innerText = surplus >= 0 ? 'Surplus' : 'Deficit';
+
+            drawWaterfall(salary, fixedExp, cardBurn, cashBurn, iouNet, surplus);
+        }
+
+        function drawWaterfall(salary, fixed, cards, cash, iou, result) {
+            const container = document.getElementById('waterfall-container');
+            const data = [
+                { label: 'In', val: salary, type: 'base' },
+                { label: 'Fix', val: -fixed, type: 'flow' },
+                { label: 'Card', val: -cards, type: 'flow' },
+                { label: 'Cash', val: -cash, type: 'flow' },
+                { label: 'IOU', val: -iou, type: 'flow' },
+                { label: 'Net', val: result, type: 'final' }
+            ];
+
+            const maxVal = Math.max(salary, Math.abs(result), 100);
+            const h = 160;
+            const w = container.clientWidth || 350;
+            const barW = (w / data.length) * 0.7;
+            const gap = (w / data.length) * 0.3;
+            const scale = (val) => (Math.abs(val) / (maxVal * 1.1)) * h;
+
+            let runningTotal = 0;
+            let svgContent = '';
+
+            data.forEach((d, i) => {
+                const x = i * (barW + gap) + 10;
+                let barH = scale(d.val);
+                if(barH < 2 && Math.abs(d.val) > 0) barH = 2;
+
+                let y = 0;
+                let color = '#334155';
+
+                if (d.type === 'base') {
+                    runningTotal = d.val;
+                    y = h - barH;
+                    color = '#10B981';
+                } else if (d.type === 'final') {
+                    y = h - Math.abs(scale(d.val));
+                    color = d.val >= 0 ? '#10B981' : '#F43F5E';
+                } else {
+                    const prevTop = h - scale(runningTotal);
+                    if (d.val < 0) {
+                        y = prevTop;
+                        runningTotal += d.val;
+                        color = '#F43F5E';
+                        if(i === 2) color = '#F59E0B';
+                        if(i === 3) color = '#6366f1';
+                    } else {
+                        y = prevTop - barH;
+                        runningTotal += d.val;
+                        color = '#10B981';
+                    }
+                }
+
+                svgContent += `<rect x="${x}" y="${y}" width="${barW}" height="${barH}" fill="${color}" rx="2" />`;
+                svgContent += `<text x="${x + barW/2}" y="${y - 5}" class="chart-val">${roundK(Math.abs(d.val))}</text>`;
+                svgContent += `<text x="${x + barW/2}" y="${h + 15}" class="chart-label" text-anchor="middle">${d.label}</text>`;
+            });
+
+            container.innerHTML = `<svg width="100%" height="100%" viewBox="0 0 ${w} ${h + 20}">${svgContent}</svg>`;
+        }
+
+        // --- CASHFLOW TAB LOGIC ---
+        function renderCashflow() {
+            const list = document.getElementById('flow-list');
+            list.innerHTML = '';
+
+            let netLiquidity = 0;
+            state.accounts.forEach(acc => {
+                let em = 0; (acc.earmarks||[]).forEach(e => em += e.amount);
+                netLiquidity += ((acc.balance||0) - em);
+            });
+            
+            const startBal = netLiquidity + (state.salary || 0);
+            document.getElementById('cf-start-bal').innerText = '₹ ' + fmt(startBal);
+
+            let currentBal = startBal;
+            const items = [];
+            
+            state.expenses.forEach(e => { if(e.amount > 0) items.push({ id: e.id, name: e.name, amt: -e.amount, type: 'exp' }); });
+            state.cards.forEach(c => { const due = (c.out||0) - (c.defer||0); if(due > 0) items.push({ id: c.id, name: c.name, amt: -due, type: 'card' }); });
+            state.ious.forEach(i => { if(i.amount > 0) { if(i.type === 'pay') items.push({ id: i.id, name: i.name, amt: -i.amount, type: 'iou_pay' }); else items.push({ id: i.id, name: i.name, amt: i.amount, type: 'iou_get' }); } });
+
+            if (state.flowOrder && state.flowOrder.length > 0) {
+                items.sort((a, b) => {
+                    const idxA = state.flowOrder.indexOf(a.id);
+                    const idxB = state.flowOrder.indexOf(b.id);
+                    if (idxA !== -1 && idxB !== -1) return idxA - idxB;
+                    if (idxA === -1) return 1; return -1;
+                });
+            }
+
+            if(items.length === 0) {
+                list.innerHTML = `<li class="text-center py-10 text-slate-600 text-xs">No active liabilities or expenses to prioritize</li>`;
+            } else {
+                items.forEach(item => {
+                    currentBal += item.amt;
+                    const isNeg = item.amt < 0;
+                    let icon = 'fa-circle'; if(item.type === 'card') icon = 'fa-credit-card'; if(item.type === 'exp') icon = 'fa-file-invoice';
+                    
+                    const li = document.createElement('li');
+                    li.className = 'bg-slate-800 p-3 rounded-lg border border-slate-700 flex items-center gap-3';
+                    li.setAttribute('data-id', item.id);
+                    li.innerHTML = `
+                        <div class="drag-handle text-slate-600 px-1 cursor-grab"><i class="fas fa-grip-vertical"></i></div>
+                        <div class="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center shrink-0"><i class="fas ${icon} text-slate-400 text-xs"></i></div>
+                        <div class="flex-1 min-w-0">
+                            <p class="text-xs font-bold text-slate-300 truncate">${item.name}</p>
+                            <p class="text-sm font-bold font-mono ${isNeg ? 'text-money-red' : 'text-money-green'}">${isNeg ? '-' : '+'} ₹${fmt(Math.abs(item.amt))}</p>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-[9px] text-slate-500 uppercase">Bal After</p>
+                            <p class="text-sm font-bold font-mono ${currentBal >= 0 ? 'text-white' : 'text-money-red'}">₹${fmt(currentBal)}</p>
+                        </div>
+                    `;
+                    list.appendChild(li);
+                });
+            }
+
+            const elEnd = document.getElementById('cf-end-bal');
+            elEnd.innerText = '₹ ' + fmt(currentBal);
+            elEnd.className = `text-3xl font-bold font-mono ${currentBal >= 0 ? 'text-money-green' : 'text-money-red'}`;
+
+            if(sortableInstance) sortableInstance.destroy();
+            if(items.length > 0) {
+                sortableInstance = new Sortable(list, { handle: '.drag-handle', animation: 150, ghostClass: 'sortable-ghost', onEnd: function() {
+                    const newOrder = []; for(let child of list.children) newOrder.push(child.getAttribute('data-id')); state.flowOrder = newOrder; saveData();
+                }});
+            }
+        }
+
+        function switchTab(t) {
+            ['dashboard','accounts','inputs','cashflow'].forEach(x => {
+                document.getElementById('view-'+x).classList.add('hidden');
+                document.getElementById('view-'+x).classList.remove('flex');
+                document.getElementById('tab-'+x).classList.remove('tab-active');
+                document.getElementById('tab-'+x).classList.add('tab-inactive');
+            });
+            const v = document.getElementById('view-'+t);
+            v.classList.remove('hidden'); if(t==='cashflow') v.classList.add('flex');
+            document.getElementById('tab-'+t).classList.add('tab-active'); document.getElementById('tab-'+t).classList.remove('tab-inactive');
+            if(t==='dashboard') updateDashboardCalc(); if(t==='cashflow') renderCashflow();
+        }
+    </script>
+</body>
+</html>
+
