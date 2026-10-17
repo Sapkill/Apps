@@ -1,0 +1,1293 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>WhatsApp Chat Viewer</title>
+<script>
+(function(){var t=null;try{t=localStorage.getItem('wcv-theme')}catch(e){}
+if(t!=='light'&&t!=='dark'){t=(window.matchMedia&&matchMedia('(prefers-color-scheme: dark)').matches)?'dark':'light'}
+document.documentElement.setAttribute('data-theme',t);})();
+</script>
+<style>
+:root{
+  --font:"Segoe UI","Helvetica Neue",Helvetica,"Lucida Grande",Arial,Ubuntu,Cantarell,"Fira Sans",sans-serif,"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji";
+  --accent:#00a884; --accent-strong:#008069; --accent-soft:rgba(0,168,132,.14);
+  --app-bg:#d1d7db; --panel:#ffffff; --panel-header:#f0f2f5; --info-bg:#f0f2f5; --chat-bg:#efeae2;
+  --out:#d9fdd3; --in:#ffffff; --text:#111b21; --text-2:#667781; --text-3:#8696a0;
+  --border:#e9edef; --chip:#ffffff; --chip-text:#54656f; --sys:#ffeecd; --sys-text:#54656f;
+  --tick:#53bdeb; --shadow:0 1px .5px rgba(11,20,26,.13); --hover:#f5f6f6; --link:#027eb5;
+  --overlay:rgba(11,20,26,.45); --card:#ffffff; --track:#e9edef; --heat0:#eef1f3;
+  --tab-on-bg:#e7fce3; --tab-on-text:#008069; --toast:#3b4a54; --meta-out:#667781;
+}
+[data-theme="dark"]{
+  --app-bg:#0c1317; --panel:#111b21; --panel-header:#202c33; --info-bg:#0c1317; --chat-bg:#0b141a;
+  --out:#005c4b; --in:#202c33; --text:#e9edef; --text-2:#8696a0; --text-3:#667781;
+  --border:#222d34; --chip:#182229; --chip-text:#8696a0; --sys:#182229; --sys-text:#ffd279;
+  --hover:#202c33; --link:#53bdeb; --overlay:rgba(0,0,0,.6); --card:#1f2c33; --track:#2a3942; --heat0:#1a252c;
+  --tab-on-bg:#0a332c; --tab-on-text:#00a884; --toast:#e9edef; --meta-out:rgba(255,255,255,.6);
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{height:100%}
+body{margin:0;background:var(--app-bg);color:var(--text);font-family:var(--font);overflow:hidden;-webkit-font-smoothing:antialiased}
+button{font-family:inherit;color:inherit;cursor:pointer}
+.app{position:relative;height:100vh;height:100dvh;max-width:1600px;margin:0 auto;display:flex;background:var(--panel);overflow:hidden}
+@media (min-width:1441px){.app{height:calc(100dvh - 38px);top:19px;box-shadow:0 6px 18px rgba(11,20,26,.05)}}
+.icon-btn{width:40px;height:40px;border-radius:50%;border:0;background:transparent;display:grid;place-items:center;color:var(--text-2);flex:none}
+.icon-btn:hover{background:rgba(134,150,160,.15)}
+.icon-btn svg{width:22px;height:22px}
+.theme-btn .moon{display:none}
+[data-theme="dark"] .theme-btn .sun{display:none}
+[data-theme="dark"] .theme-btn .moon{display:block}
+
+/* ---------- Landing ---------- */
+.landing{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;background:var(--panel-header);border-bottom:6px solid var(--accent);position:relative;padding:24px 16px;overflow-y:auto}
+.landing .theme-btn{position:absolute;top:14px;right:14px}
+.land-inner{width:min(560px,100%);text-align:center}
+.land-inner h1{font-weight:300;font-size:32px;margin:18px 0 10px;color:var(--text)}
+.land-inner p{color:var(--text-2);font-size:14px;line-height:20px;margin:0 auto 26px;max-width:460px}
+.drop{display:flex;flex-direction:column;align-items:center;gap:6px;padding:30px 20px;border:2px dashed var(--text-3);border-radius:14px;background:var(--panel);cursor:pointer;transition:border-color .15s,background .15s}
+.drop:hover,.drop.over{border-color:var(--accent);background:var(--accent-soft)}
+.drop svg{width:44px;height:44px;color:var(--accent)}
+.drop strong{font-size:16px;font-weight:500}
+.drop span{font-size:13.5px;color:var(--text-2)}
+.drop u{color:var(--accent-strong);text-decoration:none;font-weight:500}
+[data-theme="dark"] .drop u{color:var(--accent)}
+.link-btn{background:none;border:0;color:var(--accent-strong);font-size:14px;margin-top:16px;padding:6px 10px;border-radius:16px}
+[data-theme="dark"] .link-btn{color:var(--accent)}
+.link-btn:hover{background:var(--accent-soft)}
+.howto{margin:18px auto 0;text-align:left;font-size:13.5px;color:var(--text-2);max-width:460px}
+.howto summary{cursor:pointer;text-align:center;list-style:none;color:var(--text-2)}
+.howto summary::-webkit-details-marker{display:none}
+.howto ol{margin:10px 0 0;padding-left:20px;line-height:21px}
+.land-foot{position:absolute;bottom:22px;left:0;right:0;text-align:center;font-size:13px;color:var(--text-3);display:flex;justify-content:center;align-items:center;gap:6px;padding:0 16px}
+.land-foot svg{width:12px;height:12px;flex:none}
+.hero-art svg{width:min(300px,70vw);height:auto}
+
+/* ---------- Chat ---------- */
+.chat{flex:1;min-width:0;display:flex;flex-direction:column;border-left:1px solid var(--border)}
+.chat-header{height:59px;flex:none;display:flex;align-items:center;gap:6px;padding:0 10px 0 16px;background:var(--panel-header);z-index:3}
+.who{flex:1;min-width:0;display:flex;align-items:center;gap:13px;cursor:pointer;height:100%}
+.who-text{min-width:0}
+.who .name{font-size:16px;line-height:21px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.who .sub{font-size:13px;line-height:20px;color:var(--text-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.av{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;color:#fff;font-weight:600;font-size:15px;flex:none;letter-spacing:.3px;user-select:none}
+.av.grp{background:#dfe5e7;color:#fff}
+[data-theme="dark"] .av.grp{background:#6a7175}
+.av.grp svg{width:60%;height:60%}
+.chat-body{position:relative;flex:1;min-height:0;background:var(--chat-bg)}
+.chat-body::before{content:"";position:absolute;inset:0;background-image:var(--doodle-light);opacity:.075;pointer-events:none}
+[data-theme="dark"] .chat-body::before{background-image:var(--doodle-dark);opacity:.06}
+#scroller{position:absolute;inset:0;overflow-y:auto;overflow-anchor:none;padding:8px clamp(10px,5.5%,64px) 14px}
+#scroller::-webkit-scrollbar{width:6px}
+#scroller::-webkit-scrollbar-thumb{background:rgba(134,150,160,.35);border-radius:3px}
+.day{position:relative;padding-bottom:4px}
+.day-chip{position:sticky;top:6px;z-index:2;display:flex;justify-content:center;margin:10px 0 8px;pointer-events:none}
+.day-chip span{pointer-events:auto;cursor:pointer;background:var(--chip);color:var(--chip-text);font-size:12.5px;line-height:21px;padding:5px 12px 6px;border-radius:7.5px;box-shadow:var(--shadow)}
+.day.flash .day-chip span{animation:chipflash 2.2s ease}
+@keyframes chipflash{0%,55%{background:var(--accent);color:#fff}100%{}}
+.row{display:flex;padding:0 9px;margin-bottom:2px;border-radius:4px}
+.row.first{margin-top:10px}
+.row.out{justify-content:flex-end}
+.row.flash{animation:rowflash 2.4s ease}
+@keyframes rowflash{0%,45%{background:rgba(0,168,132,.22)}100%{background:transparent}}
+.bubble{position:relative;max-width:min(65%,600px);padding:6px 7px 8px 9px;border-radius:7.5px;box-shadow:var(--shadow);font-size:14.2px;line-height:19px;color:var(--text);white-space:pre-wrap;overflow-wrap:anywhere}
+@media (max-width:700px){.bubble{max-width:85%}}
+.out .bubble{background:var(--out)}
+.in .bubble{background:var(--in)}
+.first.out .bubble{border-top-right-radius:0}
+.first.in .bubble{border-top-left-radius:0}
+.first .bubble::after{content:"";position:absolute;top:0;width:8px;height:13px;background:inherit}
+.first.out .bubble::after{right:-8px;clip-path:polygon(0 0,100% 0,0 100%)}
+.first.in .bubble::after{left:-8px;clip-path:polygon(0 0,100% 0,100% 100%)}
+.bubble .sender{display:block;font-size:12.8px;font-weight:500;line-height:22px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bubble a{color:var(--link)}
+.bubble code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13px}
+.spacer{display:inline-block;height:1px;vertical-align:baseline}
+.meta{position:absolute;right:7px;bottom:3px;display:flex;align-items:center;gap:3px;font-size:11px;line-height:15px;color:var(--text-2);white-space:nowrap}
+.out .meta{color:var(--meta-out)}
+.meta .tick{color:var(--tick);width:16px;height:11px;margin-left:1px}
+.meta .ed{margin-right:2px}
+.media{color:var(--text-2);font-style:italic}
+.bubble.jumbo{background:transparent!important;box-shadow:none;padding:2px 2px 18px}
+.bubble.jumbo::after{display:none}
+.bubble.jumbo .txt{font-size:44px;line-height:52px}
+.bubble.jumbo .spacer{display:none}
+.bubble.jumbo .meta{background:var(--chip);color:var(--chip-text);padding:0 6px;border-radius:9px;bottom:0;right:2px;box-shadow:var(--shadow)}
+.sys{display:flex;justify-content:center;margin:8px 0}
+.sys span{max-width:min(80%,520px);background:var(--sys);color:var(--sys-text);font-size:12.5px;line-height:18px;padding:6px 12px 7px;border-radius:7.5px;box-shadow:var(--shadow);text-align:center}
+.sys svg{width:10px;height:12px;margin-right:5px;vertical-align:-1px}
+.fab{position:absolute;right:18px;bottom:16px;width:42px;height:42px;border-radius:50%;border:0;background:var(--panel);color:var(--text-2);box-shadow:0 1px 3px rgba(11,20,26,.25);display:grid;place-items:center;z-index:4}
+.fab svg{width:22px;height:22px}
+.composer{min-height:62px;flex:none;display:flex;align-items:center;gap:6px;padding:5px 12px;background:var(--panel-header)}
+.fake-input{flex:1;min-width:0;background:var(--panel);border-radius:8px;padding:10px 12px;color:var(--text-3);font-size:14.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.composer .icon-btn{cursor:default}
+.composer .icon-btn:hover{background:transparent}
+
+/* ---------- Info panel ---------- */
+.info{width:min(420px,38%);flex:none;display:flex;flex-direction:column;background:var(--info-bg);border-left:1px solid var(--border)}
+@media (max-width:900px){.info{position:absolute;inset:0;width:100%;z-index:20}}
+.panel-head{height:59px;flex:none;display:flex;align-items:center;gap:14px;padding:0 14px;background:var(--panel-header);font-size:16px}
+.info-scroll{flex:1;overflow-y:auto}
+.sec{background:var(--panel);margin-bottom:10px;padding:16px 24px;box-shadow:0 1px 3px rgba(11,20,26,.06)}
+.sec h3{margin:0 0 4px;font-size:14px;font-weight:400;color:var(--accent-strong)}
+[data-theme="dark"] .sec h3{color:var(--accent)}
+.sec .hint{margin:0 0 10px;font-size:13px;color:var(--text-2)}
+.hero{display:flex;flex-direction:column;align-items:center;text-align:center;padding:28px 24px 22px}
+.hero .av{width:112px;height:112px;font-size:40px}
+.hero .h-name{font-size:22px;margin-top:14px;word-break:break-word}
+.hero .h-sub{font-size:14px;color:var(--text-2);margin-top:4px}
+.p-row{display:flex;align-items:center;gap:14px;width:100%;padding:9px 6px;border:0;background:none;border-radius:8px;text-align:left}
+.p-row:hover{background:var(--hover)}
+.p-row .p-txt{flex:1;min-width:0}
+.p-row .p-name{font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.p-row .p-sub{font-size:13px;color:var(--text-2)}
+.radio{width:20px;height:20px;border-radius:50%;border:2px solid var(--text-3);flex:none;display:grid;place-items:center}
+.p-row.on .radio{border-color:var(--accent)}
+.p-row.on .radio::after{content:"";width:10px;height:10px;border-radius:50%;background:var(--accent)}
+.jump-row{display:flex;gap:8px;margin-top:8px}
+.jump-row input{flex:1;min-width:0;font:inherit;font-size:15px;padding:8px 10px;border:1px solid var(--border);border-radius:8px;background:var(--panel);color:var(--text);color-scheme:light}
+[data-theme="dark"] .jump-row input{color-scheme:dark;background:var(--panel-header)}
+.jump-row input:focus{outline:2px solid var(--accent);outline-offset:-1px}
+.btn{border:0;border-radius:20px;background:var(--accent);color:#fff;font-size:14px;font-weight:500;padding:9px 20px}
+[data-theme="dark"] .btn{color:#111b21}
+.btn:hover{filter:brightness(.95)}
+.btn.wide{width:100%;margin-top:12px}
+.quick{display:flex;gap:8px;margin:12px 0 4px;flex-wrap:wrap}
+.pill{border:1px solid var(--border);background:var(--panel);border-radius:16px;padding:6px 12px;font-size:13px;color:var(--text-2)}
+.pill:hover{border-color:var(--accent);color:var(--accent-strong)}
+.yr{margin-top:14px}
+.yr-h{display:flex;justify-content:space-between;font-size:14px;font-weight:500;margin-bottom:6px}
+.yr-h span{font-weight:400;color:var(--text-2);font-size:12.5px}
+.mo-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:6px}
+.mo{border:1px solid var(--border);background:var(--panel);border-radius:8px;padding:5px 2px;display:flex;flex-direction:column;align-items:center;gap:1px}
+.mo b{font-size:12.5px;font-weight:500}
+.mo small{font-size:10.5px;color:var(--text-2)}
+.mo:not(:disabled):hover{border-color:var(--accent);background:var(--accent-soft)}
+.mo:disabled{opacity:.38;cursor:default}
+.teasers{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px}
+.teaser{background:var(--panel-header);border-radius:10px;padding:10px 8px;text-align:center}
+.teaser .t-big{font-size:20px;line-height:26px}
+.teaser .t-lbl{font-size:11.5px;color:var(--text-2);margin-top:2px;line-height:15px}
+.row-btn{display:flex;align-items:center;gap:16px;width:100%;border:0;background:none;padding:8px 0;font-size:15px;text-align:left}
+.row-btn svg{width:22px;height:22px;color:var(--text-2)}
+.row-btn.danger{color:#ea0038}
+.row-btn.danger svg{color:#ea0038}
+
+/* ---------- Modal ---------- */
+.modal-back{position:fixed;inset:0;background:var(--overlay);display:grid;place-items:center;z-index:60;padding:16px}
+.modal{width:min(460px,100%);max-height:86vh;display:flex;flex-direction:column;background:var(--panel);border-radius:10px;box-shadow:0 17px 50px rgba(11,20,26,.19),0 12px 15px rgba(11,20,26,.24);padding:22px 20px 14px}
+.modal h2{margin:0 4px 6px;font-size:20px;font-weight:400}
+.modal p{margin:0 4px 14px;font-size:14px;color:var(--text-2);line-height:20px}
+.modal .list{overflow-y:auto}
+
+/* ---------- Insights ---------- */
+.insights{position:absolute;inset:0;z-index:30;display:flex;flex-direction:column;background:var(--info-bg)}
+.ins-head{height:auto;min-height:59px;flex:none;display:flex;align-items:center;gap:12px;padding:6px 12px;background:var(--panel-header)}
+.ins-head .t1{font-size:16px}
+.ins-head .t2{font-size:13px;color:var(--text-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tabs{flex:none;display:flex;gap:8px;overflow-x:auto;padding:10px 16px;background:var(--panel);border-bottom:1px solid var(--border);scrollbar-width:none}
+.tabs::-webkit-scrollbar{display:none}
+.tab{border:0;border-radius:18px;padding:7px 14px;background:var(--panel-header);color:var(--text-2);font-size:14px;white-space:nowrap}
+.tab.on{background:var(--tab-on-bg);color:var(--tab-on-text);font-weight:500}
+.ins-body{flex:1;overflow-y:auto;padding:16px}
+.ins-wrap{max-width:1040px;margin:0 auto}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px}
+.grid.wide{grid-template-columns:repeat(auto-fill,minmax(320px,1fr))}
+.card{background:var(--card);border-radius:12px;padding:16px;box-shadow:var(--shadow);min-width:0}
+.card.span{grid-column:1/-1}
+.card h4{margin:0 0 4px;font-size:15px;font-weight:500}
+.card .def{font-size:12px;color:var(--text-2);margin:0 0 12px;line-height:16px}
+.kpi .num{font-size:28px;font-weight:600;line-height:34px;font-variant-numeric:tabular-nums}
+.kpi .lbl{font-size:13px;color:var(--text-2)}
+.kpi .sm{font-size:12px;color:var(--text-3);margin-top:4px}
+.facts{margin:0;padding:0;list-style:none}
+.facts li{display:flex;gap:12px;align-items:flex-start;padding:10px 0;border-bottom:1px solid var(--border);font-size:14.5px;line-height:21px}
+.facts li:last-child{border-bottom:0}
+.facts .fe{font-size:20px;line-height:21px;flex:none;width:26px;text-align:center}
+.sec-title{font-size:13px;letter-spacing:.4px;text-transform:uppercase;color:var(--text-2);margin:22px 4px 10px}
+.sec-title:first-child{margin-top:4px}
+.award{display:flex;flex-direction:column}
+.award .a-top{display:flex;align-items:center;gap:12px}
+.award .a-ico{font-size:30px;width:48px;height:48px;border-radius:50%;background:var(--panel-header);display:grid;place-items:center;flex:none}
+.award .a-title{font-size:15px;font-weight:500}
+.award .a-def{font-size:12px;color:var(--text-2);line-height:16px}
+.award .a-win{margin-top:14px;display:flex;align-items:center;gap:8px;font-size:17px;font-weight:500}
+.award .a-stat{font-size:13px;color:var(--text-2);margin-top:2px}
+.award .a-others{margin-top:10px;padding-top:8px;border-top:1px solid var(--border);font-size:12px;color:var(--text-2);display:flex;flex-direction:column;gap:2px}
+.award .a-others span{display:flex;justify-content:space-between;gap:8px}
+.dot{width:10px;height:10px;border-radius:50%;flex:none;display:inline-block}
+.share{display:flex;height:26px;border-radius:13px;overflow:hidden;margin:6px 0 10px}
+.share i{display:block;height:100%}
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:13px}
+.legend span{display:flex;align-items:center;gap:6px}
+.cmp{padding:12px 0;border-bottom:1px solid var(--border)}
+.cmp:last-child{border-bottom:0}
+.cmp-h{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 10px;margin-bottom:8px;font-size:14px;font-weight:500}
+.cmp-h small{font-weight:400;font-size:12px;color:var(--text-2)}
+.cmp-r{display:grid;grid-template-columns:minmax(70px,150px) 1fr auto;align-items:center;gap:10px;font-size:13px;margin:4px 0}
+.cmp-n{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text-2)}
+.cmp-v{font-variant-numeric:tabular-nums;text-align:right;min-width:64px}
+.track{height:10px;border-radius:5px;background:var(--track);overflow:hidden}
+.track i{display:block;height:100%;border-radius:5px}
+.bars{display:grid;grid-template-columns:repeat(var(--n),minmax(0,1fr));gap:3px;height:170px}
+.bars-scroll{overflow-x:auto;padding-bottom:4px}
+.bars-scroll .bars{grid-template-columns:repeat(var(--n),minmax(12px,1fr));min-width:calc(var(--n) * 15px)}
+.bcol{display:flex;flex-direction:column;min-width:0}
+.barea{flex:1;display:flex;align-items:flex-end}
+.bstack{width:100%;display:flex;flex-direction:column-reverse;border-radius:3px 3px 0 0;overflow:hidden;min-height:0}
+.bstack i{display:block;width:100%}
+.blbl{font-size:10px;color:var(--text-2);text-align:center;height:14px;line-height:14px;margin-top:4px;white-space:nowrap;overflow:visible}
+.bcol.click{cursor:pointer}
+.bcol.click:hover .bstack{filter:brightness(1.15)}
+.heat{display:grid;grid-template-columns:34px repeat(24,minmax(0,1fr));gap:2px;font-size:10px;color:var(--text-2)}
+.heat .hc{aspect-ratio:1;border-radius:2px;background:var(--heat0)}
+.heat .hl{display:flex;align-items:center}
+.heat .ht{text-align:center}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{display:inline-flex;align-items:center;gap:6px;background:var(--panel-header);border-radius:14px;padding:4px 10px;font-size:13px}
+.chip b{font-weight:500;color:var(--text-2);font-size:12px}
+.chip.em{font-size:18px;padding:3px 9px}
+.chip.em b{font-size:12px}
+.pname{display:flex;align-items:center;gap:8px;font-weight:500;font-size:14px;margin:12px 0 8px}
+.pname:first-of-type{margin-top:0}
+.quote{font-size:13.5px;line-height:19px;background:var(--panel-header);border-radius:8px;padding:10px 12px;white-space:pre-wrap;overflow-wrap:anywhere;max-height:140px;overflow:hidden;position:relative}
+.mile{display:flex;gap:14px;padding:14px 0;border-bottom:1px solid var(--border)}
+.mile:last-child{border-bottom:0}
+.mile .m-ico{font-size:22px;width:40px;height:40px;border-radius:50%;background:var(--panel-header);display:grid;place-items:center;flex:none}
+.mile .m-body{flex:1;min-width:0}
+.mile .m-t{font-size:15px;font-weight:500}
+.mile .m-s{font-size:13px;color:var(--text-2);margin-top:2px}
+.mile .quote{margin-top:8px}
+.go{border:0;background:none;color:var(--accent-strong);font-size:13px;font-weight:500;padding:6px 0 0}
+[data-theme="dark"] .go{color:var(--accent)}
+.go:hover{text-decoration:underline}
+.mini-table{width:100%;border-collapse:collapse;font-size:13.5px}
+.mini-table th,.mini-table td{padding:8px 6px;border-bottom:1px solid var(--border);text-align:right;white-space:nowrap}
+.mini-table th:first-child,.mini-table td:first-child{text-align:left}
+.mini-table th{font-weight:500;color:var(--text-2);font-size:12.5px}
+.mini-table tr:last-child td{border-bottom:0}
+.tscroll{overflow-x:auto}
+
+/* ---------- Drop overlay & toast ---------- */
+.drop-overlay{position:fixed;inset:0;z-index:80;background:rgba(0,168,132,.88);color:#fff;display:grid;place-items:center;font-size:24px;font-weight:300;pointer-events:none}
+.drop-overlay div{border:3px dashed rgba(255,255,255,.8);border-radius:20px;padding:40px 50px;text-align:center}
+.toast{position:fixed;left:50%;bottom:86px;transform:translate(-50%,16px);opacity:0;pointer-events:none;background:var(--toast);color:var(--panel);font-size:14px;padding:10px 16px;border-radius:8px;transition:opacity .2s,transform .2s;z-index:90;max-width:min(520px,90vw);text-align:center;box-shadow:0 4px 14px rgba(0,0,0,.2)}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+</style>
+</head>
+<body>
+<div class="app" id="app">
+
+  <!-- Landing -->
+  <section class="landing" id="landing">
+    <button class="icon-btn theme-btn" title="Toggle light / dark" aria-label="Toggle theme">
+      <svg class="sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4.5"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+      <svg class="moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+    </button>
+    <div class="land-inner">
+      <div class="hero-art">
+        <svg viewBox="0 0 320 190" fill="none">
+          <rect x="40" y="20" width="110" height="160" rx="16" fill="var(--panel)" stroke="var(--text-3)" stroke-width="2"/>
+          <rect x="170" y="10" width="110" height="170" rx="16" fill="var(--panel)" stroke="var(--text-3)" stroke-width="2"/>
+          <rect x="52" y="48" width="64" height="18" rx="6" fill="var(--in)" stroke="var(--border)"/>
+          <rect x="74" y="74" width="64" height="18" rx="6" fill="#d9fdd3"/>
+          <rect x="52" y="100" width="54" height="18" rx="6" fill="var(--in)" stroke="var(--border)"/>
+          <rect x="84" y="126" width="54" height="18" rx="6" fill="#d9fdd3"/>
+          <rect x="182" y="40" width="64" height="18" rx="6" fill="#d9fdd3"/>
+          <rect x="204" y="66" width="64" height="18" rx="6" fill="var(--in)" stroke="var(--border)"/>
+          <rect x="182" y="92" width="54" height="18" rx="6" fill="#d9fdd3"/>
+          <rect x="214" y="118" width="54" height="18" rx="6" fill="var(--in)" stroke="var(--border)"/>
+          <path d="M150 100h20" stroke="var(--accent)" stroke-width="2.5" stroke-linecap="round"/>
+          <path d="M163 93l7 7-7 7M157 93l-7 7 7 7" stroke="var(--accent)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+          <circle cx="95" cy="160" r="5" fill="var(--text-3)"/><circle cx="225" cy="160" r="5" fill="var(--text-3)"/>
+        </svg>
+      </div>
+      <h1>WhatsApp Chat Viewer</h1>
+      <p>Replay an exported chat the way it looked on the phone, from either side of the conversation, jump to any date and dig up the fun stats.</p>
+      <label class="drop" id="drop">
+        <input type="file" id="fileInput" accept=".txt,text/plain" hidden>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V4M7.5 8.5 12 4l4.5 4.5"/><path d="M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/></svg>
+        <strong>Drop a chat export (.txt) here</strong>
+        <span>or <u>browse files</u> · iPhone and Android exports both work</span>
+      </label>
+      <button class="link-btn" id="sampleBtn">Try the sample chat</button>
+      <details class="howto">
+        <summary>How do I export a chat? ▾</summary>
+        <ol>
+          <li>Open the chat in WhatsApp and tap the contact or group name.</li>
+          <li>Choose <b>Export chat</b> → <b>Without media</b>.</li>
+          <li>iPhone gives a .zip: unzip it and use the <b>_chat.txt</b> inside. Android gives the .txt directly.</li>
+        </ol>
+      </details>
+    </div>
+    <div class="land-foot">
+      <svg viewBox="0 0 10 12"><path fill="currentColor" d="M5 0a3 3 0 0 0-3 3v2H1a1 1 0 0 0-1 1v5a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V6a1 1 0 0 0-1-1H8V3a3 3 0 0 0-3-3zm0 1.5A1.5 1.5 0 0 1 6.5 3v2h-3V3A1.5 1.5 0 0 1 5 1.5z"/></svg>
+      Chats are read inside this browser and never uploaded anywhere.
+    </div>
+  </section>
+
+  <!-- Chat -->
+  <section class="chat" id="chat" hidden>
+    <header class="chat-header">
+      <div class="who" id="whoBtn" role="button" tabindex="0" title="Chat info, perspective, jump to date, insights">
+        <div class="av" id="hdrAv"></div>
+        <div class="who-text"><div class="name" id="hdrName"></div><div class="sub" id="hdrSub"></div></div>
+      </div>
+      <button class="icon-btn" id="calBtn" title="Jump to date" aria-label="Jump to date">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/><circle cx="12" cy="15" r="1.3" fill="currentColor"/></svg>
+      </button>
+      <button class="icon-btn" id="insBtn" title="Fun insights" aria-label="Fun insights">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/><path d="M18.5 15.5l.8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8z"/></svg>
+      </button>
+      <button class="icon-btn theme-btn" title="Toggle light / dark" aria-label="Toggle theme">
+        <svg class="sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4.5"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+        <svg class="moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+      </button>
+      <button class="icon-btn" id="moreBtn" title="Chat info" aria-label="Chat info">
+        <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg>
+      </button>
+    </header>
+    <div class="chat-body">
+      <div id="scroller"><div id="msgs"></div></div>
+      <button class="fab" id="fab" title="Jump to latest" hidden>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+      </button>
+    </div>
+    <footer class="composer">
+      <span class="icon-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M8.5 14.5s1.3 2 3.5 2 3.5-2 3.5-2"/><circle cx="9" cy="10" r=".8" fill="currentColor"/><circle cx="15" cy="10" r=".8" fill="currentColor"/></svg></span>
+      <span class="icon-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span>
+      <div class="fake-input">Read-only replay · drop another .txt anywhere to switch chats</div>
+      <span class="icon-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21"/></svg></span>
+    </footer>
+  </section>
+
+  <!-- Info panel -->
+  <aside class="info" id="info" hidden></aside>
+
+  <!-- Insights -->
+  <section class="insights" id="insights" hidden>
+    <div class="ins-head">
+      <button class="icon-btn" id="insBack" aria-label="Back"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M11 6l-6 6 6 6"/></svg></button>
+      <div style="min-width:0;flex:1"><div class="t1">Fun insights ✨</div><div class="t2" id="insSub"></div></div>
+      <button class="icon-btn theme-btn" title="Toggle light / dark" aria-label="Toggle theme">
+        <svg class="sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4.5"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+        <svg class="moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+      </button>
+    </div>
+    <nav class="tabs" id="tabs"></nav>
+    <div class="ins-body" id="insBody"></div>
+  </section>
+</div>
+
+<div class="modal-back" id="modal" hidden>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <h2 id="modalTitle">Whose phone is this?</h2>
+    <p>Pick whose side you want to see the chat from. Their messages show on the right in green. You can switch any time by clicking the name at the top.</p>
+    <div class="list" id="modalList"></div>
+  </div>
+</div>
+<div class="drop-overlay" id="dropOverlay" hidden><div>Drop the chat .txt to open it</div></div>
+<div class="toast" id="toast" role="status"></div>
+
+<script>
+(() => {
+'use strict';
+
+/* =========================================================
+   Helpers
+   ========================================================= */
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const nf = new Intl.NumberFormat('en-IN');
+const n = v => nf.format(Math.round(v));
+const pct = (a, b) => b ? (a / b * 100) : 0;
+const store = {
+  get(k){ try { return localStorage.getItem(k); } catch(e){ return null; } },
+  set(k, v){ try { localStorage.setItem(k, v); } catch(e){} }
+};
+const MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const WD = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+const WD_LONG = ['Mondays','Tuesdays','Wednesdays','Thursdays','Fridays','Saturdays','Sundays'];
+const COLORS = ['#06a77d','#3a8fd6','#d0487a','#d68a00','#8a63d2','#e0663f','#1f9e3a','#b54fc7','#2a9fb8','#c4572e','#6b8e23','#7b5bd6'];
+
+const fmtLong = d => d.toLocaleDateString('en-GB', {day:'numeric', month:'long', year:'numeric'});
+const fmtShort = d => d.toLocaleDateString('en-GB', {day:'numeric', month:'short', year:'numeric'});
+const fmtTime = d => { const h = d.getHours(), m = d.getMinutes(); return `${h % 12 || 12}:${String(m).padStart(2,'0')} ${h < 12 ? 'am' : 'pm'}`; };
+const hourLbl = h => `${h % 12 || 12} ${h < 12 ? 'am' : 'pm'}`;
+const dkOf = d => d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate();
+const dateOfDk = dk => new Date(Math.floor(dk / 10000), Math.floor(dk / 100) % 100 - 1, dk % 100);
+const isoOfDk = dk => `${Math.floor(dk/10000)}-${String(Math.floor(dk/100)%100).padStart(2,'0')}-${String(dk%100).padStart(2,'0')}`;
+function fmtDur(ms){
+  const s = ms / 1000;
+  if (s < 60) return `${Math.max(1, Math.round(s))} sec`;
+  const m = s / 60;
+  if (m < 60) return `${Math.round(m)} min`;
+  const h = m / 60;
+  if (h < 24) { const hh = Math.floor(h), mm = Math.round((h - hh) * 60); return mm ? `${hh}h ${mm}m` : `${hh}h`; }
+  const d = h / 24;
+  if (d < 60) return `${d < 10 ? d.toFixed(1).replace(/\.0$/,'') : Math.round(d)} days`;
+  return `${(d / 30.44).toFixed(1).replace(/\.0$/,'')} months`;
+}
+function median(a){ if (!a.length) return null; const s = Float64Array.from(a).sort(); const k = s.length >> 1; return s.length % 2 ? s[k] : (s[k-1] + s[k]) / 2; }
+const inc = (map, k, by = 1) => map.set(k, (map.get(k) || 0) + by);
+const topN = (map, k) => [...map].sort((a, b) => b[1] - a[1]).slice(0, k);
+function initials(name){
+  const clean = name.replace(/[^\p{L}\p{N}\s]/gu, ' ').trim();
+  if (!clean) return '#';
+  const parts = clean.split(/\s+/);
+  return ((parts[0][0] || '') + (parts.length > 1 ? parts[parts.length - 1][0] : '')).toUpperCase();
+}
+
+let toastTimer;
+function toast(msg){
+  const t = $('#toast'); t.textContent = msg; t.classList.add('show');
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('show'), 3200);
+}
+
+/* =========================================================
+   Theme + wallpaper
+   ========================================================= */
+function doodle(color){
+  const s = `<svg xmlns='http://www.w3.org/2000/svg' width='260' height='260' viewBox='0 0 260 260' fill='none' stroke='${color}' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'>`+
+  `<path d='M32 40c-5-9-21-4-15 7l15 13 15-13c6-11-10-16-15-7z'/>`+
+  `<path d='M128 16l4 9 10 1-7 7 2 10-9-5-9 5 2-10-7-7 10-1z'/>`+
+  `<circle cx='212' cy='42' r='13'/><path d='M207 39h.01M217 39h.01M206 47q6 6 12 0'/>`+
+  `<path d='M58 104h42a8 8 0 0 1 8 8v18a8 8 0 0 1-8 8H80l-10 9v-9h-12a8 8 0 0 1-8-8v-18a8 8 0 0 1 8-8z'/>`+
+  `<path d='M166 98v30a7 7 0 1 1-4-6v-20l20-5v24a7 7 0 1 1-4-6v-19z'/>`+
+  `<path d='M226 118a15 15 0 1 0 13 23a12 12 0 1 1-13-23z'/>`+
+  `<path d='M18 200a12 12 0 0 1 22-6a9 9 0 0 1 14 9a8 8 0 0 1-2 15H22a10 10 0 0 1-4-18z'/>`+
+  `<rect x='104' y='190' width='36' height='25' rx='5'/><circle cx='122' cy='203' r='7'/><path d='M112 190l4-6h12l4 6'/>`+
+  `<path d='M206 176l-10 21h12l-8 21 21-27h-12l8-15z'/>`+
+  `<circle cx='86' cy='62' r='3'/><circle cx='160' cy='62' r='2'/><circle cx='36' cy='138' r='2.5'/><circle cx='246' cy='210' r='2.5'/><circle cx='160' cy='244' r='2'/><circle cx='70' cy='236' r='2'/>`+
+  `</svg>`;
+  return `url("data:image/svg+xml;utf8,${encodeURIComponent(s)}")`;
+}
+document.documentElement.style.setProperty('--doodle-light', doodle('#1b1b1b'));
+document.documentElement.style.setProperty('--doodle-dark', doodle('#ffffff'));
+$$('.theme-btn').forEach(b => b.addEventListener('click', () => {
+  const t = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', t); store.set('wcv-theme', t);
+}));
+
+/* =========================================================
+   Icons
+   ========================================================= */
+const TICKS = `<svg class="tick" viewBox="0 0 16 11"><path fill="currentColor" d="M11.07.65 10.2 0 4.48 7.07 1.4 4.3l-.82.9 3.97 3.57zM15.07.65 14.2 0 8.48 7.07l-.58-.52-.82.9 1.47 1.32z"/></svg>`;
+const LOCK = `<svg viewBox="0 0 10 12"><path fill="currentColor" d="M5 0a3 3 0 0 0-3 3v2H1a1 1 0 0 0-1 1v5a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V6a1 1 0 0 0-1-1H8V3a3 3 0 0 0-3-3zm0 1.5A1.5 1.5 0 0 1 6.5 3v2h-3V3A1.5 1.5 0 0 1 5 1.5z"/></svg>`;
+const GROUP_ICON = `<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="9" cy="8" r="3.4"/><path d="M2.5 19.5c0-3.6 2.9-6 6.5-6s6.5 2.4 6.5 6z"/><circle cx="16.8" cy="9" r="2.7" opacity=".85"/><path d="M15.5 13.7c3.4-.5 6 1.6 6 5.3h-4.4c0-2-.6-3.8-1.6-5.3z" opacity=".85"/></svg>`;
+const MEDIA = {image:'📷 Photo', video:'🎥 Video', audio:'🎤 Audio', sticker:'🏷️ Sticker', gif:'🎞️ GIF', document:'📄 Document', contact:'👤 Contact card', media:'📎 Media omitted', viewonce:'👁️ View-once media'};
+
+/* =========================================================
+   Parsing (iPhone + Android exports)
+   ========================================================= */
+const RE_IOS = /^\[(\d{1,4})[\/.\-](\d{1,2})[\/.\-](\d{1,4}),?\s+(\d{1,2})[:.](\d{2})(?:[:.](\d{2}))?\s*([ap]\.?\s?m\.?)?\]\s?(.*)$/i;
+const RE_AND = /^(\d{1,4})[\/.\-](\d{1,2})[\/.\-](\d{1,4}),?\s+(\d{1,2})[:.](\d{2})(?:[:.](\d{2}))?\s*([ap]\.?\s?m\.?)?\s+[-–]\s(.*)$/i;
+const BIDI = /[\u200e\u200f\u202a-\u202e\u2066-\u2069]/g;
+
+function detectMedia(raw){
+  const s = raw.trim();
+  if (/^<Media omitted>$/i.test(s)) return 'media';
+  if (/^null$/.test(s)) return 'viewonce';
+  let m = /(image|video|audio|sticker|gif|document|contact card) omitted$/i.exec(s);
+  if (m) { const k = m[1].toLowerCase(); return k === 'contact card' ? 'contact' : k; }
+  m = /^<attached:\s*([^>]+)>$/i.exec(s) || /^(\S.*?)\s*\(file attached\)$/i.exec(s);
+  if (m) {
+    const f = m[1].toLowerCase();
+    if (/sticker|\.webp$/.test(f)) return 'sticker';
+    if (/photo|\.(jpe?g|png|heic)$/.test(f)) return 'image';
+    if (/gif/.test(f)) return 'gif';
+    if (/video|\.(mp4|mov|3gp|mkv)$/.test(f)) return 'video';
+    if (/audio|ptt|\.(opus|m4a|mp3|aac|ogg|wav)$/.test(f)) return 'audio';
+    if (/\.vcf$/.test(f)) return 'contact';
+    return 'document';
+  }
+  return null;
+}
+
+function parseChat(raw){
+  const text = raw.replace(/^\ufeff/, '').replace(/\r\n?/g, '\n');
+  const lines = text.split('\n');
+  const recs = [];
+  for (const line0 of lines) {
+    const line = line0.replace(/^[\u200e\u200f\u202a-\u202e\ufeff]+/, '');
+    let m = RE_IOS.exec(line), fmt = 'ios';
+    if (!m) { m = RE_AND.exec(line); fmt = 'android'; }
+    if (m) recs.push({a:+m[1], b:+m[2], c:+m[3], h:+m[4], mi:+m[5], s:m[6] ? +m[6] : 0, ap:(m[7] || ''), rest:m[8], fmt});
+    else if (recs.length) recs[recs.length - 1].rest += '\n' + line0;
+  }
+  if (!recs.length) return null;
+
+  // Day/month order: India & most of the world is D/M/Y; US exports are M/D/Y.
+  let order = 'DMY';
+  if (recs.some(r => r.a > 31)) order = 'YMD';
+  else if (recs.some(r => r.a > 12)) order = 'DMY';
+  else if (recs.some(r => r.b > 12)) order = 'MDY';
+
+  const msgs = [];
+  for (const r of recs) {
+    let d, mo, y;
+    if (order === 'YMD') { y = r.a; mo = r.b; d = r.c; }
+    else if (order === 'MDY') { mo = r.a; d = r.b; y = r.c; }
+    else { d = r.a; mo = r.b; y = r.c; }
+    if (y < 100) y += 2000;
+    let h = r.h;
+    const ap = r.ap.toLowerCase().replace(/[^apm]/g, '');
+    if (ap.startsWith('p') && h < 12) h += 12;
+    if (ap.startsWith('a') && h === 12) h = 0;
+    const date = new Date(y, mo - 1, d, h, r.mi, r.s);
+    if (isNaN(date)) continue;
+
+    let sender = null, body = r.rest.replace(/\s+$/, '');
+    const idx = body.indexOf(': ');
+    if (idx > 0 && idx <= 80) {
+      const cand = body.slice(0, idx);
+      if (r.fmt === 'ios' || !/["“”]/.test(cand)) { sender = cand.replace(BIDI, '').replace(/^~\s*/, '').trim(); body = body.slice(idx + 2); }
+    } else if (r.fmt === 'ios' && body.endsWith(':')) {
+      sender = body.slice(0, -1).replace(BIDI, '').trim(); body = '';
+    }
+    const startsLrm = /^[\u200e\u200f]/.test(body);
+    let t = body.replace(/[\u200e\u200f]/g, '');
+    let edited = false;
+    if (/<This message was edited>\s*$/i.test(t)) { edited = true; t = t.replace(/\s*<This message was edited>\s*$/i, ''); }
+
+    let type = 'text', kind = null;
+    const media = sender !== null ? detectMedia(t) : null;
+    if (sender === null || !sender) { type = 'system'; }
+    else if (media) { type = 'media'; kind = media; }
+    else if (/^(This message was deleted\.?|You deleted this message\.?)$/i.test(t.trim())) type = 'deleted';
+    else if (/end-to-end encrypted/i.test(t) && /(messages and calls|no one outside)/i.test(t)) type = 'system';
+    else if (startsLrm && r.fmt === 'ios') type = 'system';
+
+    msgs.push({i: msgs.length, t: +date, date, dk: dkOf(date), sender, text: t, type, kind, edited});
+  }
+  return msgs.length ? msgs : null;
+}
+
+/* =========================================================
+   State
+   ========================================================= */
+const S = {msgs:[], days:[], msgDay:null, people:[], color:{}, me:null, isGroup:false, title:'', file:'', win:{s:0, e:0}, stats:null, insCache:{}, tab:'overview', groupName:null};
+
+function loadChat(raw, fileName){
+  let msgs;
+  try { msgs = parseChat(raw); } catch(e) { console.error(e); msgs = null; }
+  if (!msgs) { toast("Couldn't find any WhatsApp messages in that file. Is it the exported .txt?"); return; }
+  const cnt = new Map();
+  for (const m of msgs) if (m.type !== 'system') inc(cnt, m.sender);
+  if (!cnt.size) { toast('That file only has system messages, nothing to show.'); return; }
+  S.msgs = msgs;
+  S.people = [...cnt].sort((a, b) => b[1] - a[1]).map(([name, count], i) => ({name, count, color: COLORS[i % COLORS.length]}));
+  S.color = Object.fromEntries(S.people.map(p => [p.name, p.color]));
+  S.file = fileName || '';
+  // Group name: iOS writes group events under the group's own name; Android/iOS file names carry it too.
+  const sysSenders = new Map();
+  for (const m of msgs) if (m.type === 'system' && m.sender && !cnt.has(m.sender)) inc(sysSenders, m.sender);
+  const fromFile = (/WhatsApp Chat(?: with| -)\s*(.+?)(?:\.txt)?$/i.exec(S.file) || [])[1];
+  let fromEvent = null;
+  for (const m of msgs) {
+    if (m.type !== 'system') continue;
+    const g = /(?:created group|changed the (?:subject|group name)(?: from .+?)? to)\s*["“](.+)["”]\s*$/i.exec(m.text);
+    if (g) fromEvent = g[1];
+  }
+  const fromSys = fromEvent || (sysSenders.size ? topN(sysSenders, 1)[0][0] : null);
+  S.isGroup = S.people.length > 2 || !!fromSys || msgs.some(m => m.type === 'system' && /\b(created group|added|left|changed the group)/i.test(m.text) && m.sender === null && S.people.length > 2);
+  S.groupName = fromSys || fromFile || 'Group chat';
+  S.fileTitle = fromFile;
+  // Days
+  S.days = []; S.msgDay = new Int32Array(msgs.length);
+  let cur = null;
+  msgs.forEach((m, i) => {
+    if (!cur || cur.dk !== m.dk) {
+      cur = {dk:m.dk, s:i, e:i+1, date:m.date, dn: Math.round(Date.UTC(m.date.getFullYear(), m.date.getMonth(), m.date.getDate()) / 864e5)};
+      S.days.push(cur);
+    } else cur.e = i + 1;
+    S.msgDay[i] = S.days.length - 1;
+  });
+  S.stats = null; S.insCache = {}; S.tab = 'overview';
+  closeInfo(); closeInsights();
+  if (S.people.length === 1) { start(S.people[0].name); return; }
+  openPicker();
+}
+
+function openPicker(){
+  $('#modalList').innerHTML = S.people.map(p => personRow(p, p.name === S.me)).join('');
+  $('#modal').hidden = false;
+}
+function personRow(p, on){
+  return `<button class="p-row${on ? ' on' : ''}" data-person="${esc(p.name)}">
+    <span class="av" style="background:${p.color}">${esc(initials(p.name))}</span>
+    <span class="p-txt"><div class="p-name">${esc(p.name)}</div><div class="p-sub">${n(p.count)} messages · ${pct(p.count, S.people.reduce((a, q) => a + q.count, 0)).toFixed(0)}%</div></span>
+    <span class="radio"></span></button>`;
+}
+$('#modalList').addEventListener('click', e => {
+  const b = e.target.closest('[data-person]'); if (!b) return;
+  $('#modal').hidden = true; start(b.dataset.person);
+});
+
+function start(me){
+  S.me = me;
+  $('#landing').hidden = true; $('#chat').hidden = false;
+  if (!S.stats) S.stats = computeStats();
+  updateHeader();
+  renderAt(S.days.length - 1, 'bottom');
+}
+
+function others(){ return S.people.filter(p => p.name !== S.me); }
+function chatTitle(){
+  if (S.isGroup) return S.groupName;
+  const o = others();
+  return o.length ? o[0].name : (S.fileTitle || S.me);
+}
+function updateHeader(){
+  const title = chatTitle();
+  const av = $('#hdrAv');
+  if (S.isGroup) { av.className = 'av grp'; av.style.background = ''; av.innerHTML = GROUP_ICON; }
+  else { const o = others()[0] || S.people[0]; av.className = 'av'; av.style.background = o.color; av.textContent = initials(o.name); }
+  $('#hdrName').textContent = title;
+  const first = S.days[0].date, last = S.days[S.days.length - 1].date;
+  $('#hdrSub').textContent = S.isGroup
+    ? S.people.map(p => p.name === S.me ? 'You' : p.name).join(', ')
+    : `Viewing as ${S.me} · ${fmtShort(first)} – ${fmtShort(last)} · click for options`;
+}
+
+/* =========================================================
+   Message rendering (windowed)
+   ========================================================= */
+const EMOJI_RE = /\p{Regional_Indicator}{2}|\p{Extended_Pictographic}(?:\uFE0F|\p{Emoji_Modifier})*(?:\u200D\p{Extended_Pictographic}(?:\uFE0F|\p{Emoji_Modifier})*)*/gu;
+const URL_RE = /\b(?:https?:\/\/|www\.)[^\s<]*[^\s<.,:;"')\]!?]/gi;
+
+function isJumbo(t){
+  const s = t.trim();
+  if (!s || s.length > 40) return false;
+  const em = s.match(EMOJI_RE);
+  if (!em || em.length > 3) return false;
+  return s.replace(EMOJI_RE, '').replace(/[\s\uFE0F\u200D]/g, '') === '';
+}
+function fmtInline(s){
+  s = esc(s);
+  s = s.replace(/```([\s\S]+?)```/g, '<code>$1</code>');
+  s = s.replace(/(^|[\s(>])\*(?!\s)([^*\n]+?)(?<!\s)\*(?=$|[\s.,!?:;)<])/g, '$1<b>$2</b>');
+  s = s.replace(/(^|[\s(>])_(?!\s)([^_\n]+?)(?<!\s)_(?=$|[\s.,!?:;)<])/g, '$1<i>$2</i>');
+  s = s.replace(/(^|[\s(>])~(?!\s)([^~\n]+?)(?<!\s)~(?=$|[\s.,!?:;)<])/g, '$1<s>$2</s>');
+  return s;
+}
+function fmtText(raw){
+  let out = '', last = 0, m;
+  URL_RE.lastIndex = 0;
+  while ((m = URL_RE.exec(raw))) {
+    out += fmtInline(raw.slice(last, m.index));
+    const u = m[0], href = /^https?:/i.test(u) ? u : 'https://' + u;
+    out += `<a href="${esc(href)}" target="_blank" rel="noopener noreferrer">${esc(u)}</a>`;
+    last = m.index + u.length;
+  }
+  return out + fmtInline(raw.slice(last));
+}
+function dayChipLabel(d){
+  const today = new Date(); today.setHours(0,0,0,0);
+  const dd = new Date(d.date); dd.setHours(0,0,0,0);
+  const diff = Math.round((today - dd) / 864e5);
+  if (diff === 0) return 'Today';
+  if (diff === 1) return 'Yesterday';
+  if (diff > 1 && diff < 7) return d.date.toLocaleDateString('en-GB', {weekday:'long'});
+  return fmtLong(d.date);
+}
+function msgHTML(m, prev){
+  if (m.type === 'system') {
+    const enc = /end-to-end encrypted/i.test(m.text);
+    return `<div class="sys" data-i="${m.i}"><span>${enc ? LOCK : ''}${esc(m.text)}</span></div>`;
+  }
+  const out = m.sender === S.me;
+  const first = !prev || prev.type === 'system' || prev.sender !== m.sender;
+  let head = '';
+  if (S.isGroup && !out && first) head = `<span class="sender" style="color:${S.color[m.sender] || 'var(--accent)'}">${esc(m.sender)}</span>`;
+  let body, jumbo = false;
+  if (m.type === 'media') body = `<span class="media">${MEDIA[m.kind] || MEDIA.media}</span>`;
+  else if (m.type === 'deleted') body = `<span class="media">🚫 ${out ? 'You deleted this message' : 'This message was deleted'}</span>`;
+  else { jumbo = isJumbo(m.text); body = jumbo ? esc(m.text.trim()) : fmtText(m.text); }
+  const sp = (out ? 70 : 52) + (m.edited ? 40 : 0);
+  const meta = `<span class="meta">${m.edited ? '<span class="ed">Edited</span>' : ''}<span>${fmtTime(m.date)}</span>${out ? TICKS : ''}</span>`;
+  return `<div class="row ${out ? 'out' : 'in'}${first ? ' first' : ''}" data-i="${m.i}"><div class="bubble${jumbo ? ' jumbo' : ''}">${head}<span class="txt">${body}<span class="spacer" style="width:${sp}px"></span></span>${meta}</div></div>`;
+}
+function dayHTML(di){
+  const d = S.days[di];
+  let h = `<section class="day" data-di="${di}"><div class="day-chip"><span title="Jump to another date">${esc(dayChipLabel(d))}</span></div>`;
+  let prev = null;
+  for (let k = d.s; k < d.e; k++) { h += msgHTML(S.msgs[k], prev); prev = S.msgs[k]; }
+  return h + '</section>';
+}
+const BUDGET = 350, CHUNK = 250, MAX_RENDERED = 1500;
+const dayLen = i => S.days[i].e - S.days[i].s;
+function backFrom(e, budget){ let s = e, c = 0; while (s > 0 && c < budget) { s--; c += dayLen(s); } return s; }
+function fwdFrom(s, budget){ let e = s, c = 0; while (e < S.days.length && c < budget) { c += dayLen(e); e++; } return e; }
+function renderedCount(){ return S.win.e > S.win.s ? S.days[S.win.e - 1].e - S.days[S.win.s].s : 0; }
+
+function renderAt(di, mode, msgIndex){
+  const sc = $('#scroller');
+  let s, e;
+  if (mode === 'bottom') { e = S.days.length; s = backFrom(e, BUDGET); }
+  else { s = backFrom(di, 80); e = fwdFrom(di, BUDGET); if (e <= di) e = di + 1; }
+  S.win = {s, e};
+  let h = ''; for (let i = s; i < e; i++) h += dayHTML(i);
+  $('#msgs').innerHTML = h;
+  if (mode === 'bottom') sc.scrollTop = sc.scrollHeight;
+  else if (msgIndex != null) {
+    const row = $(`[data-i="${msgIndex}"]`, $('#msgs'));
+    if (row) { sc.scrollTop = Math.max(0, row.offsetTop - sc.clientHeight / 3); row.classList.add('flash'); }
+  } else {
+    const el = $(`.day[data-di="${di}"]`, $('#msgs'));
+    if (el) { sc.scrollTop = el.offsetTop - 2; el.classList.add('flash'); setTimeout(() => el.classList.remove('flash'), 2400); }
+  }
+  syncFab();
+}
+function prepend(){
+  const sc = $('#scroller'), ns = backFrom(S.win.s, CHUNK);
+  let h = ''; for (let i = ns; i < S.win.s; i++) h += dayHTML(i);
+  const before = sc.scrollHeight;
+  $('#msgs').insertAdjacentHTML('afterbegin', h);
+  sc.scrollTop += sc.scrollHeight - before;
+  S.win.s = ns;
+  while (renderedCount() > MAX_RENDERED && S.win.e - S.win.s > 1) { $('#msgs').lastElementChild.remove(); S.win.e--; }
+}
+function append(){
+  const sc = $('#scroller'), ne = fwdFrom(S.win.e, CHUNK);
+  let h = ''; for (let i = S.win.e; i < ne; i++) h += dayHTML(i);
+  $('#msgs').insertAdjacentHTML('beforeend', h);
+  S.win.e = ne;
+  while (renderedCount() > MAX_RENDERED && S.win.e - S.win.s > 1) {
+    const before = sc.scrollHeight;
+    $('#msgs').firstElementChild.remove(); S.win.s++;
+    sc.scrollTop -= before - sc.scrollHeight;
+  }
+}
+function syncFab(){
+  const sc = $('#scroller');
+  $('#fab').hidden = !(S.win.e < S.days.length || sc.scrollHeight - sc.scrollTop - sc.clientHeight > 500);
+}
+let raf = 0;
+$('#scroller').addEventListener('scroll', () => {
+  if (raf) return;
+  raf = requestAnimationFrame(() => {
+    raf = 0;
+    const sc = $('#scroller');
+    if (sc.scrollTop < 700 && S.win.s > 0) prepend();
+    else if (sc.scrollHeight - sc.scrollTop - sc.clientHeight < 700 && S.win.e < S.days.length) append();
+    syncFab();
+  });
+}, {passive:true});
+$('#fab').addEventListener('click', () => renderAt(S.days.length - 1, 'bottom'));
+$('#msgs').addEventListener('click', e => { if (e.target.closest('.day-chip span')) openInfo('jump'); });
+
+function currentDay(){
+  const sc = $('#scroller');
+  for (const sec of $$('#msgs > .day')) if (sec.offsetTop + sec.offsetHeight > sc.scrollTop + 20) return +sec.dataset.di;
+  return S.days.length - 1;
+}
+function jumpToDk(dk, quiet){
+  let idx = S.days.findIndex(d => d.dk >= dk);
+  if (idx < 0) idx = S.days.length - 1;
+  if (!quiet && S.days[idx].dk !== dk) toast(`No messages on ${fmtLong(dateOfDk(dk))}, showing ${fmtLong(S.days[idx].date)}`);
+  renderAt(idx, 'top');
+  if (window.innerWidth <= 900) closeInfo();
+}
+function jumpToMsg(i){
+  closeInsights();
+  if (window.innerWidth <= 900) closeInfo();
+  renderAt(S.msgDay[i], 'top', i);
+}
+
+/* =========================================================
+   Info panel (opens from the name in the header)
+   ========================================================= */
+function openInfo(focus){
+  renderInfo();
+  $('#info').hidden = false;
+  if (focus) { const t = $('#sec-' + focus); if (t) t.scrollIntoView({block:'start'}); if (focus === 'jump') $('#jumpDate').focus({preventScroll:true}); }
+}
+function closeInfo(){ $('#info').hidden = true; }
+function renderInfo(){
+  const st = S.stats, first = S.days[0], last = S.days[S.days.length - 1];
+  const o = others();
+  const heroAv = S.isGroup ? `<div class="av grp">${GROUP_ICON}</div>` : `<div class="av" style="background:${(o[0] || S.people[0]).color}">${esc(initials((o[0] || S.people[0]).name))}</div>`;
+  const heroSub = S.isGroup ? `Group · ${S.people.length} participants` : `${n(st.total)} messages · since ${fmtShort(first.date)}`;
+  const curDk = S.days[currentDay()].dk;
+  const tz = st.topEmoji ? st.topEmoji[0] : '💬';
+  $('#info').innerHTML = `
+  <div class="panel-head"><button class="icon-btn" id="infoClose" aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></button><span>Chat info</span></div>
+  <div class="info-scroll">
+    <div class="sec hero">${heroAv}<div class="h-name">${esc(chatTitle())}</div><div class="h-sub">${heroSub}</div></div>
+    <div class="sec" id="sec-view"><h3>View chat as</h3><p class="hint">Their messages appear on the right, in green.</p>
+      <div>${S.people.map(p => personRow(p, p.name === S.me)).join('')}</div></div>
+    <div class="sec" id="sec-jump"><h3>Jump to date</h3><p class="hint">Chat runs ${fmtShort(first.date)} – ${fmtShort(last.date)}. A date with no messages takes you to the next one that has some.</p>
+      <div class="jump-row"><input type="date" id="jumpDate" min="${isoOfDk(first.dk)}" max="${isoOfDk(last.dk)}" value="${isoOfDk(curDk)}"><button class="btn" id="jumpGo">Go</button></div>
+      <div class="quick"><button class="pill" data-q="first">⏮ First message</button><button class="pill" data-q="last">Latest ⏭</button><button class="pill" data-q="busiest">🔥 Busiest day</button></div>
+      ${monthsHTML()}</div>
+    <div class="sec" id="sec-ins"><h3>Fun insights</h3>
+      <div class="teasers">
+        <div class="teaser"><div class="t-big">${tz}</div><div class="t-lbl">top emoji</div></div>
+        <div class="teaser"><div class="t-big">${st.streak.len}</div><div class="t-lbl">day longest streak</div></div>
+        <div class="teaser"><div class="t-big">${hourLbl(st.peakHour)}</div><div class="t-lbl">prime time</div></div>
+      </div>
+      <button class="btn wide" id="openIns">✨ Open fun insights</button></div>
+    <div class="sec">
+      <button class="row-btn" id="openAnother"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V4M7.5 8.5 12 4l4.5 4.5"/><path d="M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/></svg>Open another chat</button>
+      <button class="row-btn danger" id="closeChat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>Close chat</button>
+    </div>
+  </div>`;
+}
+function monthsHTML(){
+  const ym = new Map();
+  for (const d of S.days) {
+    const y = Math.floor(d.dk / 10000), mo = Math.floor(d.dk / 100) % 100;
+    if (!ym.has(y)) ym.set(y, new Array(12).fill(0));
+    let c = 0; for (let k = d.s; k < d.e; k++) if (S.msgs[k].type !== 'system') c++;
+    ym.get(y)[mo - 1] += c;
+  }
+  return [...ym].map(([y, arr]) => `<div class="yr"><div class="yr-h">${y}<span>${n(arr.reduce((a, b) => a + b, 0))} messages</span></div><div class="mo-grid">${
+    arr.map((c, i) => `<button class="mo" ${c ? `data-ym="${y * 100 + i + 1}"` : 'disabled'} title="${n(c)} messages"><b>${MON[i]}</b><small>${c ? n(c) : '–'}</small></button>`).join('')
+  }</div></div>`).join('');
+}
+$('#info').addEventListener('click', e => {
+  const t = e.target;
+  if (t.closest('#infoClose')) return closeInfo();
+  const p = t.closest('[data-person]');
+  if (p) return setMe(p.dataset.person);
+  if (t.closest('#jumpGo')) { const v = $('#jumpDate').value; if (v) jumpToDk(+v.replace(/-/g, '')); return; }
+  const q = t.closest('[data-q]');
+  if (q) {
+    if (q.dataset.q === 'first') jumpToDk(S.days[0].dk, true);
+    else if (q.dataset.q === 'last') { renderAt(S.days.length - 1, 'bottom'); if (window.innerWidth <= 900) closeInfo(); }
+    else jumpToDk(S.stats.busiestDay.dk, true);
+    return;
+  }
+  const mo = t.closest('[data-ym]');
+  if (mo) return jumpToDk(+mo.dataset.ym * 100 + 1, true);
+  if (t.closest('#openIns')) return openInsights();
+  if (t.closest('#openAnother')) return $('#fileInput').click();
+  if (t.closest('#closeChat')) return closeChat();
+});
+$('#info').addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.id === 'jumpDate') $('#jumpGo').click(); });
+function setMe(name){
+  if (name === S.me) return;
+  const sc = $('#scroller'), top = sc.scrollTop;
+  S.me = name; S.insCache = {};
+  updateHeader();
+  let h = ''; for (let i = S.win.s; i < S.win.e; i++) h += dayHTML(i);
+  $('#msgs').innerHTML = h; sc.scrollTop = top;
+  renderInfo();
+  toast(`Now viewing as ${name}`);
+}
+function closeChat(){
+  closeInfo(); closeInsights();
+  $('#chat').hidden = true; $('#landing').hidden = false;
+  S.msgs = []; S.days = []; S.me = null; $('#msgs').innerHTML = '';
+}
+$('#whoBtn').addEventListener('click', () => openInfo());
+$('#whoBtn').addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openInfo(); } });
+$('#moreBtn').addEventListener('click', () => $('#info').hidden ? openInfo() : closeInfo());
+$('#calBtn').addEventListener('click', () => openInfo('jump'));
+$('#insBtn').addEventListener('click', () => openInsights());
+
+/* =========================================================
+   Stats
+   ========================================================= */
+const STOP = new Set(`a an the and or but if so of at by for with about to from in on off out up down over under into onto than then too very just also only not no nor yes yeah yea ya yep ok okay k kk oh ohh hmm i me my mine myself we us our ours you your yours u ur he him his she her it its they them their this that these those there here what which who whom whose when where why how all any both each few more most other some such own same can could will would shall should may might must do does did doing done have has had having be is am are was were been being get got gets let lets like just really im i'm ive i've ill i'll id i'd its it's thats that's dont don't didnt didn't cant can't wont won't isnt isn't youre you're whats what's theres there's one two also as because until while again further once s t d m re ve ll y hai hain ka ki ke ko se me mein mai main toh to bhi aur ho na ye yeh wo woh tha thi the kya hu hoon hun kar raha rahi rahe ek ab tu tum hum aap mujhe mera meri mere tera teri tere apna sab par pe he hi hey hello`.split(/\s+/));
+const HING = new Set(`yaar yar yrr bhai bhaiya arre arey oye acha accha achha acchi achi accha haan haa haanji nahi nahin nhi nai kya kyu kyun kyon kaise kaisa kaisi kab kaha kahan kuch kuchh bahut bohot bohat bht thoda thodi abhi baad pehle hai hain tha thi hoga hogi raha rahi rahe kar karo karna karke kiya diya liya dena lena bol bolo bata batao dekh dekho suno mujhe mera meri mere tera teri tere tumhara tumhari apna apni hum tum aap woh wo yeh ye koi sab sabko kitna kitne matlab bas chalo chal theek thik sahi pakka jaldi kal aaj parso raat subah shaam khana ghar paise kaam dost pyaar dil mast bindaas jugaad bakwas bakwaas pagal chup bilkul shayad zaroor zarur phir fir waise vaise isliye kyunki lekin aur bhi se ka ki ke ko mein mai toh hu hoon ji chahiye sakta sakti wala wali wale ekdum bura buri baat baatein samjha samajh pata maza mazaa dimag neend uth jaa aaja aao gaya gayi aaya aayi dekha suna bola bhool yaad thak thaka thaki chutti pura puri poora sach jhooth accha haina nahi_na arey kyaa kyaaa`.split(/\s+/));
+const WORD_RE = /[\p{L}\p{M}\p{N}']+/gu;
+const LAUGH_RE = /\b(?:a*h+a+h+[ah]*|h+e+h+e+[he]*|l+o+l+|lmf?a+o+|rofl|hihi+)\b/i;
+const LAUGH_EMO = /[\u{1F602}\u{1F923}\u{1F606}\u{1F639}]/u;
+const GN_RE = /\b(?:good\s*night|gn|g9|gnight|night\s*night|nighty\s*night|sweet\s*dreams|shubh\s*ratri)\b|💤|😴/iu;
+const GM_RE = /\b(?:good\s*morning|gm|morning|subah\s*bakhair|suprabhat)\b|🌞|☀️/iu;
+const SORRY_RE = /\b(?:sorry+|sry|soz|my\s*bad|apologi[sz]e|maaf)\b/i;
+const THANKS_RE = /\b(?:thanks?|thank\s*you|thanku|thnx|thx|tysm|shukriya|dhanyava?a?d)\b/i;
+function stretched(w){
+  if (/([a-z])\1\1/.test(w)) return true;
+  if (/^h+m{2,}$/.test(w)) return true;
+  return w.length >= 3 && /([iywuha])\1$/.test(w) && !/^(?:hawaii|shh)$/.test(w);
+}
+
+function computeStats(){
+  const P = S.people.map(p => p.name);
+  const per = {};
+  P.forEach(name => per[name] = {name, msgs:0, textMsgs:0, words:0, media:0, deleted:0, emojis:0, emojiMap:new Map(), wordMap:new Map(),
+    hing:0, hingMsgs:0, hingMap:new Map(), laughs:0, gn:0, gm:0, sorry:0, thanks:0, q:0, night:0, early:0, starts:0, lasts:0, dbl:0,
+    replies:[], maxReply:0, maxReplyAt:null, longest:null, stretch:0, stretchMap:new Map(), hours:new Array(24).fill(0), wd:new Array(7).fill(0), edited:0});
+  const hours = new Array(24).fill(0), wd = new Array(7).fill(0), heat = Array.from({length:7}, () => new Array(24).fill(0));
+  const dayCnt = new Map(), monthCnt = new Map(), emojiAll = new Map();
+  const GAP = 6 * 3600e3, DBL = 30 * 60e3;
+  let prev = null, convs = 0, total = 0, words = 0, mediaAll = 0;
+  let gap = {ms:0, from:null, to:null};
+  const counted = [];
+  for (const m of S.msgs) {
+    if (m.type === 'system') continue;
+    const p = per[m.sender]; if (!p) continue;
+    counted.push(m);
+    total++; p.msgs++;
+    const h = m.date.getHours(), w = (m.date.getDay() + 6) % 7;
+    hours[h]++; wd[w]++; heat[w][h]++; p.hours[h]++; p.wd[w]++;
+    if (h < 5) p.night++;
+    if (h >= 5 && h < 9) p.early++;
+    inc(dayCnt, m.dk); inc(monthCnt, Math.floor(m.dk / 100));
+    if (!prev || m.t - prev.t >= GAP) { p.starts++; convs++; if (prev) per[prev.sender].lasts++; }
+    else if (prev.sender !== m.sender) p.replies.push(m.t - prev.t);
+    else if (m.t - prev.t >= DBL) p.dbl++;
+    if (prev && prev.sender !== m.sender && m.t - prev.t > p.maxReply) { p.maxReply = m.t - prev.t; p.maxReplyAt = m.i; }
+    if (prev && m.t - prev.t > gap.ms) gap = {ms: m.t - prev.t, from: prev, to: m};
+    if (m.edited) p.edited++;
+    if (m.type === 'media') { p.media++; mediaAll++; }
+    else if (m.type === 'deleted') p.deleted++;
+    else {
+      const t = m.text;
+      p.textMsgs++;
+      const plain = t.replace(URL_RE, ' ');
+      const ws = plain.match(WORD_RE) || [];
+      p.words += ws.length; words += ws.length;
+      if (!p.longest || ws.length > p.longest.w) p.longest = {w: ws.length, i: m.i};
+      const em = t.match(EMOJI_RE) || [];
+      p.emojis += em.length;
+      for (const e of em) { const k = e.replace(/\p{Emoji_Modifier}/gu, ''); inc(p.emojiMap, k); inc(emojiAll, k); }
+      if (LAUGH_RE.test(plain) || LAUGH_EMO.test(t)) p.laughs++;
+      if (GN_RE.test(t)) p.gn++;
+      if (GM_RE.test(t)) p.gm++;
+      if (SORRY_RE.test(t)) p.sorry++;
+      if (THANKS_RE.test(t)) p.thanks++;
+      if (t.includes('?')) p.q++;
+      let hm = false;
+      for (const w0 of ws) {
+        const wl = w0.toLowerCase().replace(/^'+|'+$/g, '');
+        if (!wl) continue;
+        if (HING.has(wl)) { p.hing++; hm = true; inc(p.hingMap, wl); }
+        if (/^[a-z]+$/.test(wl) && stretched(wl)) { p.stretch++; inc(p.stretchMap, wl); }
+        if (wl.length > 1 && !STOP.has(wl) && !/^\d+$/.test(wl)) inc(p.wordMap, wl);
+      }
+      if (hm) p.hingMsgs++;
+    }
+    prev = m;
+  }
+  if (prev) per[prev.sender].lasts++;
+  words = Object.values(per).reduce((a, p) => a + p.words, 0);
+  // Signature words: used far more by one person than everyone else
+  const allWords = new Map();
+  for (const p of Object.values(per)) for (const [w, c] of p.wordMap) inc(allWords, w, c);
+  for (const p of Object.values(per)) {
+    const minC = Math.max(2, Math.round(p.textMsgs / 500));
+    p.signature = [...p.wordMap].filter(([, c]) => c >= minC)
+      .map(([w, c]) => [w, c, (c / ((allWords.get(w) - c) + 1)) * Math.log(1 + c)])
+      .sort((a, b) => b[2] - a[2]).slice(0, 6);
+    p.medianReply = median(p.replies);
+  }
+  // Streaks over active days
+  const dns = [...new Set(counted.map(m => S.days[S.msgDay[m.i]].dn))].sort((a, b) => a - b);
+  let streak = {len: dns.length ? 1 : 0, from: dns[0], to: dns[0]}, run = 1, runStart = dns[0];
+  for (let i = 1; i < dns.length; i++) {
+    if (dns[i] === dns[i-1] + 1) run++; else { run = 1; runStart = dns[i]; }
+    if (run > streak.len) streak = {len: run, from: runStart, to: dns[i]};
+  }
+  const dnToDate = dn => { const d = new Date(dn * 864e5); return new Date(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()); };
+  let busiestDay = {dk: S.days[0].dk, c: 0};
+  for (const [dk, c] of dayCnt) if (c > busiestDay.c) busiestDay = {dk, c};
+  let busiestMonth = {ym: 0, c: 0};
+  for (const [ym, c] of monthCnt) if (c > busiestMonth.c) busiestMonth = {ym, c};
+  // Month series (continuous)
+  const months = [];
+  if (counted.length) {
+    let y = Math.floor(counted[0].dk / 10000), mo = Math.floor(counted[0].dk / 100) % 100;
+    const endYm = Math.floor(counted[counted.length - 1].dk / 100);
+    while (y * 100 + mo <= endYm) {
+      const ym = y * 100 + mo, row = {ym, total: monthCnt.get(ym) || 0, by: {}};
+      months.push(row);
+      mo++; if (mo > 12) { mo = 1; y++; }
+    }
+    const idx = new Map(months.map((r, i) => [r.ym, i]));
+    for (const m of counted) { const r = months[idx.get(Math.floor(m.dk / 100))]; r.by[m.sender] = (r.by[m.sender] || 0) + 1; }
+  }
+  const peakHour = hours.indexOf(Math.max(...hours));
+  const peakWd = wd.indexOf(Math.max(...wd));
+  const firstDn = dns[0], lastDn = dns[dns.length - 1];
+  return {per, P, total, words, mediaAll, convs, hours, wd, heat, dayCnt, months, emojiAll,
+    topEmoji: topN(emojiAll, 1)[0] || null, gap, streak: {...streak, fromDate: streak.len ? dnToDate(streak.from) : null, toDate: streak.len ? dnToDate(streak.to) : null},
+    busiestDay, busiestMonth, peakHour, peakWd, activeDays: dns.length, spanDays: dns.length ? lastDn - firstDn + 1 : 0, counted};
+}
+
+/* =========================================================
+   Insights UI
+   ========================================================= */
+const TABS = [['overview','Overview'],['awards','🏆 Awards'],['who','Who does what'],['time','Time'],['words','Words & emoji'],['miles','Milestones']];
+function openInsights(){
+  if (!S.stats) S.stats = computeStats();
+  $('#insights').hidden = false;
+  const f = S.days[0].date, l = S.days[S.days.length - 1].date;
+  $('#insSub').textContent = `${chatTitle()} · ${fmtShort(f)} – ${fmtShort(l)} · viewing as ${S.me}`;
+  $('#tabs').innerHTML = TABS.map(([k, v]) => `<button class="tab${k === S.tab ? ' on' : ''}" data-tab="${k}">${v}</button>`).join('');
+  showTab(S.tab);
+}
+function closeInsights(){ $('#insights').hidden = true; }
+function showTab(k){
+  S.tab = k;
+  $$('#tabs .tab').forEach(b => b.classList.toggle('on', b.dataset.tab === k));
+  if (!S.insCache[k]) S.insCache[k] = ({overview, awards, who, time, words, miles})[k]();
+  $('#insBody').innerHTML = `<div class="ins-wrap">${S.insCache[k]}</div>`;
+  $('#insBody').scrollTop = 0;
+}
+$('#tabs').addEventListener('click', e => { const b = e.target.closest('[data-tab]'); if (b) showTab(b.dataset.tab); });
+$('#insBack').addEventListener('click', closeInsights);
+$('#insBody').addEventListener('click', e => {
+  const j = e.target.closest('[data-jumpmsg]'); if (j) return jumpToMsg(+j.dataset.jumpmsg);
+  const d = e.target.closest('[data-jumpdk]'); if (d) { closeInsights(); jumpToDk(+d.dataset.jumpdk, true); }
+});
+
+const who_ = name => name === S.me ? `${name} (you)` : name;
+const dot = name => `<span class="dot" style="background:${S.color[name]}"></span>`;
+const plist = () => S.stats.P.slice(0, 8).map(nm => S.stats.per[nm]);
+const minMsgs = () => Math.min(20, Math.max(1, Math.ceil(S.people[0].count * 0.05)));
+const goBtn = (i, label = 'Open in chat →') => `<button class="go" data-jumpmsg="${i}">${label}</button>`;
+const snippet = (t, k = 220) => esc(t.length > k ? t.slice(0, k).trimEnd() + '…' : t);
+
+function overview(){
+  const st = S.stats, ps = Object.values(st.per);
+  const f = S.days[0].date, l = S.days[S.days.length - 1].date;
+  const facts = [];
+  if (ps.length === 2) {
+    const [a, b] = [...ps].sort((x, y) => y.msgs - x.msgs);
+    const r = b.msgs ? a.msgs / b.msgs : Infinity;
+    facts.push(['⚖️', r < 1.1 ? `Almost perfectly balanced: ${esc(who_(a.name))} ${pct(a.msgs, st.total).toFixed(0)}% vs ${esc(who_(b.name))} ${pct(b.msgs, st.total).toFixed(0)}% of messages.`
+      : `${esc(who_(a.name))} sends <b>${isFinite(r) ? r.toFixed(1) : '∞'}×</b> as many messages as ${esc(who_(b.name))}.`]);
+    const fa = a.medianReply, fb = b.medianReply;
+    if (fa != null && fb != null) {
+      const fast = fa <= fb ? a : b, slow = fast === a ? b : a;
+      facts.push(['⏱️', `${esc(who_(fast.name))} typically replies in <b>${fmtDur(fast.medianReply)}</b>; ${esc(who_(slow.name))} takes <b>${fmtDur(slow.medianReply)}</b>.`]);
+    }
+  } else if (ps.length > 2) {
+    const a = [...ps].sort((x, y) => y.msgs - x.msgs)[0];
+    facts.push(['🗣️', `${esc(who_(a.name))} carries the group with <b>${pct(a.msgs, st.total).toFixed(0)}%</b> of all messages.`]);
+  }
+  facts.push(['🕰️', `Prime time is <b>${hourLbl(st.peakHour)}</b>: ${pct(st.hours[st.peakHour], st.total).toFixed(0)}% of messages land in that hour. The busiest weekday is ${WD_LONG[st.peakWd].slice(0, -1)}.`]);
+  const night = ps.reduce((a, p) => a + p.night, 0);
+  facts.push(['🌙', `<b>${pct(night, st.total).toFixed(0)}%</b> of messages were sent between midnight and 5 am.`]);
+  if (st.topEmoji) facts.push([st.topEmoji[0], `The chat's signature emoji is ${st.topEmoji[0]}, used <b>${n(st.topEmoji[1])}</b> time${st.topEmoji[1] === 1 ? '' : 's'}.`]);
+  if (st.streak.len > 1) facts.push(['🔥', `Longest streak: <b>${st.streak.len} days</b> in a row (${fmtShort(st.streak.fromDate)} – ${fmtShort(st.streak.toDate)}).`]);
+  if (st.gap.to && st.gap.ms > 864e5) facts.push(['🦗', `Longest silence: <b>${fmtDur(st.gap.ms)}</b>, broken by ${esc(who_(st.gap.to.sender))} on ${fmtShort(st.gap.to.date)}.`]);
+  facts.push(['📅', `Busiest day ever: <b>${fmtLong(dateOfDk(st.busiestDay.dk))}</b> with ${n(st.busiestDay.c)} messages.`]);
+  const kpi = (num, lbl, sm = '') => `<div class="card kpi"><div class="num">${num}</div><div class="lbl">${lbl}</div>${sm ? `<div class="sm">${sm}</div>` : ''}</div>`;
+  const emojis = ps.reduce((a, p) => a + p.emojis, 0);
+  return `<div class="sec-title">The numbers</div><div class="grid">
+    ${kpi(n(st.total), 'messages', `${n(st.words)} words`)}
+    ${kpi(n(st.spanDays), 'days from first to last message', `${fmtShort(f)} – ${fmtShort(l)}`)}
+    ${kpi(n(st.activeDays), 'days you actually talked', `${pct(st.activeDays, st.spanDays).toFixed(0)}% of days · ${(st.total / Math.max(1, st.activeDays)).toFixed(1)} msgs per active day`)}
+    ${kpi(n(st.convs), 'separate conversations', 'a new one starts after 6+ hours of silence')}
+    ${kpi(n(emojis), 'emojis', `${(emojis / Math.max(1, st.total)).toFixed(2)} per message`)}
+    ${kpi(n(st.mediaAll), 'photos, videos & files', 'shown as "omitted" in text exports')}
+  </div>
+  <div class="sec-title">Fun facts</div><div class="card"><ul class="facts">${facts.map(([e, t]) => `<li><span class="fe">${e}</span><span>${t}</span></li>`).join('')}</ul></div>
+  <div class="sec-title">Message share</div><div class="card">${shareBar()}</div>`;
+}
+function shareBar(){
+  const st = S.stats, ps = Object.values(st.per);
+  return `<div class="share">${ps.map(p => `<i style="flex:${p.msgs};background:${S.color[p.name]}" title="${esc(p.name)}: ${n(p.msgs)}"></i>`).join('')}</div>
+  <div class="legend">${ps.map(p => `<span>${dot(p.name)}${esc(who_(p.name))} · ${n(p.msgs)} (${pct(p.msgs, st.total).toFixed(1)}%)</span>`).join('')}</div>`;
+}
+
+function awards(){
+  const st = S.stats, ps = Object.values(st.per), mm = minMsgs();
+  const elig = ps.filter(p => p.msgs >= mm);
+  const A = [
+    {ico:'🗣️', t:'Chatterbox', d:'Most messages sent', v:p => p.msgs, f:v => `${n(v)} messages`},
+    {ico:'📜', t:'The Novelist', d:'Longest average text message', v:p => p.textMsgs ? p.words / p.textMsgs : 0, f:v => `${v.toFixed(1)} words per message`, rate:true},
+    {ico:'⚡', t:'Speed Demon', d:'Fastest median reply (only replies within an ongoing conversation, i.e. gaps under 6h)', v:p => p.medianReply, f:v => `replies in ${fmtDur(v)}`, low:true, rate:true},
+    {ico:'👻', t:'The Ghost', d:'Longest single wait before replying', v:p => p.maxReply, f:v => `once took ${fmtDur(v)} to reply`, jump:p => p.maxReplyAt},
+    {ico:'🚀', t:'Conversation Starter', d:'Sent the first message after 6+ hours of silence', v:p => p.starts, f:v => `started ${n(v)} of ${n(st.convs)} conversations`},
+    {ico:'🎤', t:'The Last Word', d:'Sent the final message before a 6h+ silence', v:p => p.lasts, f:v => `had the last word ${n(v)} times`},
+    {ico:'🦉', t:'Night Owl', d:'Share of own messages sent between midnight and 5 am', v:p => pct(p.night, p.msgs), f:v => `${v.toFixed(1)}% after midnight`, rate:true},
+    {ico:'🐦', t:'Early Bird', d:'Share of own messages sent between 5 and 9 am', v:p => pct(p.early, p.msgs), f:v => `${v.toFixed(1)}% before 9 am`, rate:true},
+    {ico:'📨', t:'Double-Texter', d:'Texted again after 30+ minutes without a reply', v:p => p.dbl, f:v => `${n(v)} double texts`},
+    {ico:'😍', t:'Emoji Royalty', d:'Emojis per message', v:p => p.emojis / Math.max(1, p.msgs), f:v => `${v.toFixed(2)} emojis per message`, rate:true},
+    {ico:'😂', t:'Laugh Track', d:'Share of messages with haha / lol / lmao / 😂 / 🤣', v:p => pct(p.laughs, p.msgs), f:v => `laughs in ${v.toFixed(1)}% of messages`, rate:true},
+    {ico:'😴', t:'Goodnight Champion', d:'Messages saying good night, gn, sweet dreams, 💤 or 😴', v:p => p.gn, f:v => `${n(v)} goodnights`},
+    {ico:'☀️', t:'Good Morning Sunshine', d:'Messages saying good morning, gm or morning', v:p => p.gm, f:v => `${n(v)} good mornings`},
+    {ico:'❓', t:'Question Master', d:'Share of messages containing a question mark', v:p => pct(p.q, p.msgs), f:v => `${v.toFixed(1)}% questions`, rate:true},
+    {ico:'🙏', t:'Apology Ambassador', d:'Messages with sorry, sry, my bad, maaf…', v:p => p.sorry, f:v => `${n(v)} apologies`},
+    {ico:'💐', t:'Gratitude Guru', d:'Messages with thanks, thank you, thx, shukriya…', v:p => p.thanks, f:v => `${n(v)} thank-yous`},
+    {ico:'📸', t:'Paparazzi', d:'Photos, videos, stickers and files shared', v:p => p.media, f:v => `${n(v)} media`},
+    {ico:'🫠', t:'Letter Stretcher', d:'Stretched words like heyyy, knoww, hmmm, per 100 messages', v:p => p.stretch / Math.max(1, p.msgs) * 100, f:v => `${v.toFixed(1)} per 100 messages`, rate:true},
+    {ico:'🇮🇳', t:'Hinglish Hero', d:'Share of text messages using Hindi words (yaar, kya, chal, pura…)', v:p => pct(p.hingMsgs, p.textMsgs), f:v => `${v.toFixed(1)}% Hinglish`, rate:true},
+    {ico:'🗑️', t:'Evidence Destroyer', d:'Messages deleted', v:p => p.deleted, f:v => `${n(v)} deleted`},
+  ];
+  const cards = A.map(a => {
+    const pool = (a.rate ? elig : ps).map(p => ({p, v: a.v(p)})).filter(x => x.v != null && x.v > 0);
+    if (!pool.length) return '';
+    pool.sort((x, y) => a.low ? x.v - y.v : y.v - x.v);
+    const w = pool[0];
+    const tied = pool.length > 1 && Math.abs(pool[1].v - w.v) < 1e-9;
+    const rest = pool.slice(1, 4);
+    const j = a.jump ? a.jump(w.p) : null;
+    return `<div class="card award"><div class="a-top"><div class="a-ico">${a.ico}</div><div><div class="a-title">${a.t}</div><div class="a-def">${a.d}</div></div></div>
+      <div class="a-win">${dot(w.p.name)}${esc(who_(w.p.name))}</div>
+      <div class="a-stat">${a.f(w.v)}${tied ? ' · tied with ' + esc(who_(pool[1].p.name)) : ''}</div>${j != null ? goBtn(j, 'See that reply →') : ''}
+      ${rest.length ? `<div class="a-others">${rest.map(x => `<span><span>${esc(who_(x.p.name))}</span><span>${a.f(x.v)}</span></span>`).join('')}</div>` : ''}</div>`;
+  }).join('');
+  return `<div class="sec-title">Superlatives</div><div class="grid">${cards || '<div class="card">Not enough messages for awards yet.</div>'}</div>
+  ${ps.length > 2 ? `<p class="def" style="margin:12px 4px">Rate-based awards only count people with at least ${mm} messages.</p>` : ''}`;
+}
+
+function cmpRow(label, def, getter, fmtv, opts = {}){
+  const rows = plist().map(p => ({p, v: getter(p)}));
+  const vals = rows.map(r => r.v == null ? 0 : r.v);
+  const max = Math.max(...vals, 1e-9);
+  return `<div class="cmp"><div class="cmp-h"><span>${label}</span>${def ? `<small>${def}</small>` : ''}</div>${rows.map(r => `<div class="cmp-r"><span class="cmp-n">${esc(who_(r.p.name))}</span><div class="track"><i style="width:${(r.v == null ? 0 : r.v) / max * 100}%;background:${S.color[r.p.name]}"></i></div><span class="cmp-v">${r.v == null ? '–' : fmtv(r.v)}</span></div>`).join('')}</div>`;
+}
+function who(){
+  const st = S.stats;
+  return `<div class="sec-title">Message share</div><div class="card">${shareBar()}</div>
+  <div class="sec-title">Head to head</div><div class="card">
+    ${cmpRow('Messages sent', '', p => p.msgs, n)}
+    ${cmpRow('Words sent', '', p => p.words, n)}
+    ${cmpRow('Average words per message', 'text messages only', p => p.textMsgs ? p.words / p.textMsgs : 0, v => v.toFixed(1))}
+    ${cmpRow('Conversations started', 'first message after 6h+ of silence', p => p.starts, n)}
+    ${cmpRow('Had the last word', 'final message before 6h+ of silence', p => p.lasts, n)}
+    ${cmpRow('Median reply time', 'shorter bar = faster', p => p.medianReply, fmtDur)}
+    ${cmpRow('Double texts', 'texted again after 30+ min without a reply', p => p.dbl, n)}
+    ${cmpRow('Questions asked', 'messages containing "?"', p => p.q, n)}
+    ${cmpRow('Media shared', 'photos, videos, stickers, files', p => p.media, n)}
+    ${cmpRow('Edited messages', '', p => p.edited, n)}
+    ${cmpRow('Deleted messages', '', p => p.deleted, n)}
+  </div>
+  ${S.people.length > 8 ? `<p class="def" style="margin:12px 4px">Showing the 8 most active of ${S.people.length} participants.</p>` : ''}`;
+}
+
+function stackedBars(labels, seriesFor, opts = {}){
+  const ps = plist();
+  const cols = labels.map((l, i) => ({l, segs: ps.map(p => ({c: S.color[p.name], v: seriesFor(p, i)}))}));
+  const tot = cols.map(c => c.segs.reduce((a, s) => a + s.v, 0));
+  const max = Math.max(1, ...tot);
+  const inner = `<div class="bars" style="--n:${labels.length}">${cols.map((c, i) => `<div class="bcol${opts.click ? ' click' : ''}" ${opts.click ? `data-jumpdk="${opts.click(i)}"` : ''} title="${esc(c.l)}: ${n(tot[i])} messages"><div class="barea"><div class="bstack" style="height:${tot[i] / max * 100}%">${c.segs.map(s => s.v ? `<i style="flex:${s.v};background:${s.c}"></i>` : '').join('')}</div></div><div class="blbl">${opts.showLbl && !opts.showLbl(i) ? '' : esc(opts.short ? opts.short(i) : c.l)}</div></div>`).join('')}</div>`;
+  return opts.scroll ? `<div class="bars-scroll">${inner}</div>` : inner;
+}
+function legend(){ return `<div class="legend" style="margin-top:10px">${plist().map(p => `<span>${dot(p.name)}${esc(who_(p.name))}</span>`).join('')}</div>`; }
+function time(){
+  const st = S.stats;
+  const hrs = Array.from({length:24}, (_, h) => hourLbl(h));
+  const maxHeat = Math.max(1, ...st.heat.flat());
+  const heat = `<div class="heat"><span></span>${Array.from({length:24}, (_, h) => `<span class="ht">${h % 3 === 0 ? (h % 12 || 12) + (h < 12 ? 'a' : 'p') : ''}</span>`).join('')}
+    ${st.heat.map((row, w) => `<span class="hl">${WD[w]}</span>${row.map((v, h) => `<span class="hc" title="${WD[w]} ${hourLbl(h)}: ${n(v)} messages" style="${v ? `background:rgba(0,168,132,${(0.12 + 0.88 * v / maxHeat).toFixed(3)})` : ''}"></span>`).join('')}`).join('')}</div>`;
+  const ms = st.months;
+  const nightRows = cmpRow('Night owl score', 'share of own messages sent midnight–5 am', p => pct(p.night, p.msgs), v => v.toFixed(1) + '%')
+    + cmpRow('Early bird score', 'share of own messages sent 5–9 am', p => pct(p.early, p.msgs), v => v.toFixed(1) + '%');
+  return `<div class="grid wide">
+    <div class="card span"><h4>Around the clock</h4><p class="def">Messages by hour of day. Prime time: ${hourLbl(st.peakHour)}.</p>
+      ${stackedBars(hrs, (p, i) => p.hours[i], {showLbl: i => i % 3 === 0, short: i => (i % 12 || 12) + (i < 12 ? 'a' : 'p')})}${legend()}</div>
+    <div class="card"><h4>Days of the week</h4><p class="def">Busiest: ${WD_LONG[st.peakWd]}.</p>${stackedBars(WD, (p, i) => p.wd[i])}</div>
+    <div class="card"><h4>When the chat comes alive</h4><p class="def">Day × hour heatmap. Darker = more messages.</p>${heat}</div>
+    <div class="card span"><h4>Month by month</h4><p class="def">Busiest month: ${MON[st.busiestMonth.ym % 100 - 1]} ${Math.floor(st.busiestMonth.ym / 100)} (${n(st.busiestMonth.c)} messages). Click a bar to jump there.</p>
+      ${stackedBars(ms.map(r => `${MON[r.ym % 100 - 1]} ${Math.floor(r.ym / 100)}`), (p, i) => ms[i].by[p.name] || 0, {scroll: ms.length > 24, click: i => ms[i].ym * 100 + 1, showLbl: i => ms.length <= 12 || ms[i].ym % 100 === 1 || i === 0, short: i => ms.length <= 12 ? MON[ms[i].ym % 100 - 1] : (ms[i].ym % 100 === 1 || i === 0 ? `${MON[ms[i].ym % 100 - 1]} '${String(Math.floor(ms[i].ym / 100)).slice(2)}` : '')})}</div>
+    <div class="card kpi"><div class="num">🔥 ${st.streak.len} day${st.streak.len === 1 ? '' : 's'}</div><div class="lbl">longest daily streak</div>${st.streak.len ? `<div class="sm">${fmtShort(st.streak.fromDate)} – ${fmtShort(st.streak.toDate)}</div><button class="go" data-jumpdk="${dkOf(st.streak.fromDate)}">Go to the start →</button>` : ''}</div>
+    <div class="card kpi"><div class="num">🦗 ${st.gap.to ? fmtDur(st.gap.ms) : '–'}</div><div class="lbl">longest silence</div>${st.gap.to ? `<div class="sm">${fmtShort(st.gap.from.date)} → ${fmtShort(st.gap.to.date)}, broken by ${esc(who_(st.gap.to.sender))}</div>${goBtn(st.gap.to.i, 'See who broke it →')}` : ''}</div>
+    <div class="card span"><h4>Night owls vs early birds</h4>${nightRows}</div>
+  </div>`;
+}
+
+function words(){
+  const st = S.stats, ps = plist();
+  const block = (title, def, fn) => `<div class="card"><h4>${title}</h4><p class="def">${def}</p>${ps.map(p => `<div class="pname">${dot(p.name)}${esc(who_(p.name))}</div>${fn(p)}`).join('')}</div>`;
+  const chips = (arr, cls = '') => arr.length ? `<div class="chips">${arr.map(([k, c]) => `<span class="chip ${cls}">${esc(k)}<b>${n(c)}</b></span>`).join('')}</div>` : '<div class="def" style="margin:0">Nothing yet.</div>';
+  const manners = `<div class="tscroll"><table class="mini-table"><thead><tr><th>Person</th><th>😂 Laughs</th><th>😴 Goodnights</th><th>☀️ Mornings</th><th>🙏 Sorry</th><th>💐 Thanks</th></tr></thead><tbody>${
+    ps.map(p => `<tr><td>${esc(who_(p.name))}</td><td>${n(p.laughs)}</td><td>${n(p.gn)}</td><td>${n(p.gm)}</td><td>${n(p.sorry)}</td><td>${n(p.thanks)}</td></tr>`).join('')}</tbody></table></div>`;
+  return `<div class="grid wide">
+    ${block('Favourite emojis', 'Skin tones merged.', p => chips(topN(p.emojiMap, 10), 'em'))}
+    ${block('Signature words', 'Words this person uses far more than anyone else in the chat.', p => chips(p.signature.map(([w, c]) => [w, c])))}
+    ${block('Most-used words', 'Common filler words (the, and, hai, ka…) removed.', p => chips(topN(p.wordMap, 12)))}
+    ${block('Hinglish meter', 'Share of text messages with at least one Hindi word.', p => `<div class="cmp-r" style="grid-template-columns:1fr auto"><div class="track"><i style="width:${pct(p.hingMsgs, p.textMsgs)}%;background:${S.color[p.name]}"></i></div><span class="cmp-v">${pct(p.hingMsgs, p.textMsgs).toFixed(1)}%</span></div>${chips(topN(p.hingMap, 8))}`)}
+    ${block('Letter stretchers', 'Words like heyyy, knoww, hmmm, sooo.', p => chips(topN(p.stretchMap, 8)))}
+    <div class="card"><h4>Rituals & manners</h4><p class="def">Messages containing each pattern.</p>${manners}</div>
+    <div class="card span"><h4>Longest message</h4><p class="def">By word count.</p>${ps.map(p => p.longest ? `<div class="pname">${dot(p.name)}${esc(who_(p.name))} · ${n(p.longest.w)} words · ${fmtShort(S.msgs[p.longest.i].date)}</div><div class="quote">${snippet(S.msgs[p.longest.i].text, 320)}</div>${goBtn(p.longest.i)}` : '').join('')}</div>
+  </div>`;
+}
+
+function miles(){
+  const st = S.stats, C = st.counted;
+  if (!C.length) return '<div class="card">No messages.</div>';
+  const items = [];
+  const f = C[0], l = C[C.length - 1];
+  const mile = (ico, t, s, i, quote) => `<div class="mile"><div class="m-ico">${ico}</div><div class="m-body"><div class="m-t">${t}</div><div class="m-s">${s}</div>${quote ? `<div class="quote">${quote}</div>` : ''}${i != null ? goBtn(i) : ''}</div></div>`;
+  const qt = m => m.type === 'text' ? snippet(m.text, 200) : (m.type === 'media' ? (MEDIA[m.kind] || MEDIA.media) : '🚫 deleted');
+  items.push(mile('🌱', 'Where it all began', `${esc(who_(f.sender))} · ${fmtLong(f.date)}, ${fmtTime(f.date)}`, f.i, qt(f)));
+  const age = (() => {
+    let y = l.date.getFullYear() - f.date.getFullYear(), m = l.date.getMonth() - f.date.getMonth(), d = l.date.getDate() - f.date.getDate();
+    if (d < 0) { m--; d += new Date(l.date.getFullYear(), l.date.getMonth(), 0).getDate(); }
+    if (m < 0) { y--; m += 12; }
+    return [y && `${y} year${y > 1 ? 's' : ''}`, m && `${m} month${m > 1 ? 's' : ''}`, `${d} day${d === 1 ? '' : 's'}`].filter(Boolean).join(', ');
+  })();
+  items.push(mile('⏳', `${age} of chat history`, `From ${fmtShort(f.date)} to ${fmtShort(l.date)}`));
+  for (const k of [100, 1000, 5000, 10000, 25000, 50000, 100000, 250000]) {
+    if (C.length >= k) { const m = C[k - 1]; items.push(mile('🎯', `Message #${n(k)}`, `${esc(who_(m.sender))} · ${fmtLong(m.date)}`, m.i, qt(m))); }
+  }
+  items.push(mile('📅', 'Busiest day ever', `${fmtLong(dateOfDk(st.busiestDay.dk))} · ${n(st.busiestDay.c)} messages`, S.days.find(d => d.dk === st.busiestDay.dk).s));
+  if (st.streak.len > 1) items.push(mile('🔥', `${st.streak.len}-day streak`, `${fmtShort(st.streak.fromDate)} – ${fmtShort(st.streak.toDate)}`, S.days.find(d => d.dn === st.streak.from).s));
+  if (st.gap.to) items.push(mile('🦗', `Longest silence: ${fmtDur(st.gap.ms)}`, `Broken by ${esc(who_(st.gap.to.sender))} on ${fmtLong(st.gap.to.date)}`, st.gap.to.i, qt(st.gap.to)));
+  items.push(mile('🏁', 'Most recent message', `${esc(who_(l.sender))} · ${fmtLong(l.date)}, ${fmtTime(l.date)}`, l.i, qt(l)));
+  // Order chronologically where a message exists, keep summary items first
+  return `<div class="card">${items.join('')}</div>`;
+}
+
+/* =========================================================
+   File input, drag & drop, sample
+   ========================================================= */
+function readFile(file){
+  if (!file) return;
+  if (/\.zip$/i.test(file.name)) { toast('Unzip the export first, then drop the _chat.txt inside it.'); return; }
+  const r = new FileReader();
+  r.onload = () => loadChat(String(r.result), file.name);
+  r.onerror = () => toast("Couldn't read that file.");
+  r.readAsText(file, 'utf-8');
+}
+$('#fileInput').addEventListener('change', e => { readFile(e.target.files[0]); e.target.value = ''; });
+let dragDepth = 0;
+const hasFiles = e => e.dataTransfer && Array.from(e.dataTransfer.types || []).includes('Files');
+window.addEventListener('dragenter', e => { if (!hasFiles(e)) return; e.preventDefault(); dragDepth++; $('#dropOverlay').hidden = false; $('#drop').classList.add('over'); });
+window.addEventListener('dragover', e => { if (hasFiles(e)) e.preventDefault(); });
+window.addEventListener('dragleave', e => { if (!hasFiles(e)) return; dragDepth = Math.max(0, dragDepth - 1); if (!dragDepth) { $('#dropOverlay').hidden = true; $('#drop').classList.remove('over'); } });
+window.addEventListener('drop', e => {
+  if (!hasFiles(e)) return;
+  e.preventDefault(); dragDepth = 0; $('#dropOverlay').hidden = true; $('#drop').classList.remove('over');
+  const files = Array.from(e.dataTransfer.files);
+  readFile(files.find(f => /\.txt$/i.test(f.name)) || files[0]);
+});
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Escape') return;
+  if (!$('#insights').hidden) closeInsights();
+  else if (!$('#info').hidden) closeInfo();
+});
+
+const SAMPLE = `[29/07/21, 23:16:58] Amir: \u200eMessages and calls are end-to-end encrypted. No one outside of this chat, not even WhatsApp, can read or listen to them.
+[29/07/21, 23:16:58] Amir: Hey can we talk here
+[29/07/21, 23:17:03] Amir: Insta is kinda annoying at times
+[29/07/21, 23:19:36] Ayushi Anand: Hii
+[29/07/21, 23:19:44] Ayushi Anand: Yes that will be better
+[29/07/21, 23:19:58] Ayushi Anand: My insta stopped responding 🤦‍♀️🤦‍♀️
+[29/07/21, 23:26:41] Amir: Ooh
+[29/07/21, 23:26:51] Amir: It's wayy bast my bed time
+[29/07/21, 23:27:04] Amir: I took an untimely nap 🤦🏼‍♂️
+[29/07/21, 23:28:04] Ayushi Anand: I actually thought you slept
+[29/07/21, 23:28:25] Ayushi Anand: Ohh that’s way
+[29/07/21, 23:28:59] Ayushi Anand: Untimely naps are the worst
+[29/07/21, 23:29:14] Ayushi Anand: Pura sleep schedule gets messed up
+[29/07/21, 23:30:15] Amir: I swear
+[29/07/21, 23:30:28] Amir: Ab kal I'll be dead
+[29/07/21, 23:30:35] Amir: Chal I'll try to sleep
+[29/07/21, 23:31:09] Ayushi Anand: I knoww
+[29/07/21, 23:31:21] Ayushi Anand: Take a chutti 😌😌
+[29/07/21, 23:31:26] Ayushi Anand: Tell them you are unwell
+[29/07/21, 23:31:33] Ayushi Anand: Yes yes
+[29/07/21, 23:31:43] Ayushi Anand: Goodnight 💤
+[29/07/21, 23:32:43] Amir: I need to finish a week worths of work tomorrow
+[29/07/21, 23:32:52] Amir: And guess who's working the weekend 🥲
+[29/07/21, 23:33:48] Amir: Good night Ayushi, sleep well 🙃`;
+$('#sampleBtn').addEventListener('click', () => loadChat(SAMPLE, 'WhatsApp Chat - Ayushi Anand.txt'));
+
+// Test hook (harmless): window.__wcv exposes state for debugging in the console
+window.__wcv = {S, loadChat, parseChat};
+})();
+</script>
+</body>
+</html>
