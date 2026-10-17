@@ -14,9 +14,10 @@
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%231C1B1A'/%3E%3Cpath d='M20 34l9 9 16-20' fill='none' stroke='%23FFEDA8' stroke-width='7' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=Manrope:wght@400;500;600;700;800&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=Manrope:wght@400;500;600;700;800&family=Unbounded:wght@600;700;800&family=Archivo:wght@400;500;600;700;800&display=swap">
 <style>
 :root{
+  --accent:var(--ink);
   --bg:#F4F2EF;--card:#FFFFFF;--ink:#1C1B1A;--muted:#5E5A55;--line:#E4E0DA;--soft:rgba(255,255,255,.62);--field:#F4F2EF;
   --sky:#D6E6FF;--peach:#FFDCC8;--mint:#CDEFDC;--butter:#FFEDA8;--lilac:#E6DCFF;
   --sky-ink:#34476B;--peach-ink:#5E4A3E;--mint-ink:#2F4A3B;--butter-ink:#5E5432;--lilac-ink:#4A3E66;
@@ -102,7 +103,7 @@ label.lbl{font-size:12px;font-weight:700;display:block;margin-bottom:4px}
 .check{display:flex;align-items:center;gap:12px;min-height:46px;font-weight:600}
 .check input{width:22px;height:22px;accent-color:var(--ink);flex:none}
 .bar{position:relative;height:14px;border-radius:7px;background:var(--soft);overflow:visible}
-.bar>i{position:absolute;left:0;top:0;bottom:0;border-radius:7px;background:var(--ink)}
+.bar>i{position:absolute;left:0;top:0;bottom:0;border-radius:7px;background:var(--accent)}
 .bar>b{position:absolute;top:-4px;width:2px;height:22px;background:var(--warn)}
 .t-inv .bar{background:rgba(255,255,255,.18)}.t-inv .bar>i{background:var(--inv-ink)}
 .ringseg{border-radius:18px;padding:12px;display:flex;flex-direction:column;gap:6px;text-decoration:none;border:0;text-align:left;min-height:76px;font-weight:700}
@@ -160,9 +161,48 @@ input[type=date].field{display:block;min-width:0;max-width:100%;-webkit-appearan
 input[type=date].field::-webkit-date-and-time-value{text-align:left}
 .row>.field,.row>input{min-width:0}
 
+/* ---------- collapsible navigation: a circle bottom-right that opens a menu ---------- */
+.navdial{position:fixed;right:max(16px,calc((100vw - 480px)/2 + 16px));bottom:calc(18px + env(safe-area-inset-bottom));z-index:30;display:flex;flex-direction:column;align-items:flex-end;gap:10px}
+.navfab{width:60px;height:60px;border-radius:50%;border:0;background:var(--inv);color:var(--inv-ink);display:flex;align-items:center;justify-content:center;box-shadow:var(--shadow);cursor:pointer}
+.navmenu{background:var(--card);border-radius:24px;padding:8px;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:2px;min-width:190px;transform-origin:bottom right;animation:navpop .16s ease-out}
+.navmenu button{display:flex;align-items:center;gap:12px;height:48px;padding:0 16px;border:0;border-radius:16px;background:transparent;color:var(--ink);font-weight:700;font-size:15px;text-align:left;cursor:pointer}
+.navmenu button.on{background:var(--inv);color:var(--inv-ink)}
+.nav-scrim{position:fixed;inset:0;z-index:29;background:rgba(0,0,0,.18)}
+@keyframes navpop{from{opacity:0;transform:scale(.85)}to{opacity:1;transform:scale(1)}}
+@media (prefers-reduced-motion:reduce){.navmenu{animation:none}}
+#app{padding-bottom:calc(96px + env(safe-area-inset-bottom))}
+
+/* ---------- Arcade theme (from mock-up B): light + dark ---------- */
+:root[data-skin="arcade"]{
+  --display:'Unbounded',system-ui,sans-serif;--body:'Archivo',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --bg:#EEF1F5;--card:#FFFFFF;--ink:#0B0D10;--muted:#4E5663;--line:#DDE2E8;--soft:rgba(11,13,16,.05);--field:#EEF1F5;
+  --sky:#E3EAFF;--peach:#FFE6D2;--mint:#EDF9C6;--butter:#FFF2BF;--lilac:#E9E5FF;
+  --sky-ink:#2C3F78;--peach-ink:#7A3E10;--mint-ink:#3E5200;--butter-ink:#5C4D00;--lilac-ink:#3D2F9E;
+  --inv:#0B0D10;--inv-ink:#C6F432;--inv-2:#1E232B;--inv-muted:#A9B3C0;
+  --good:#3E7A00;--warn:#B45309;--warn-bg:#FFF1E3;--bad:#C62828;--path:#6A5BEF;--accent:#6A5BEF;--shadow:0 6px 24px rgba(11,13,16,.14);
+}
+@media (prefers-color-scheme:dark){:root[data-skin="arcade"]:not([data-theme="light"]){
+  --bg:#0B0D10;--card:#15191F;--ink:#F2F4F7;--muted:#9AA3AF;--line:#262B33;--soft:rgba(255,255,255,.06);--field:#0B0D10;
+  --sky:#172033;--peach:#2A1D14;--mint:#1B2410;--butter:#29260F;--lilac:#1E1B36;
+  --sky-ink:#A9C1F5;--peach-ink:#FFB98A;--mint-ink:#C6F432;--butter-ink:#F3E07A;--lilac-ink:#B9B0FF;
+  --inv:#C6F432;--inv-ink:#0B0D10;--inv-2:#B3DD22;--inv-muted:#3F4A1A;
+  --good:#C6F432;--warn:#FF9F43;--warn-bg:#2A1D14;--bad:#FF6B6B;--path:#8B7CFF;--accent:#C6F432;--shadow:0 6px 24px rgba(0,0,0,.6);
+}}
+:root[data-skin="arcade"][data-theme="dark"]{
+  --bg:#0B0D10;--card:#15191F;--ink:#F2F4F7;--muted:#9AA3AF;--line:#262B33;--soft:rgba(255,255,255,.06);--field:#0B0D10;
+  --sky:#172033;--peach:#2A1D14;--mint:#1B2410;--butter:#29260F;--lilac:#1E1B36;
+  --sky-ink:#A9C1F5;--peach-ink:#FFB98A;--mint-ink:#C6F432;--butter-ink:#F3E07A;--lilac-ink:#B9B0FF;
+  --inv:#C6F432;--inv-ink:#0B0D10;--inv-2:#B3DD22;--inv-muted:#3F4A1A;
+  --good:#C6F432;--warn:#FF9F43;--warn-bg:#2A1D14;--bad:#FF6B6B;--path:#8B7CFF;--accent:#C6F432;--shadow:0 6px 24px rgba(0,0,0,.6);
+}
+:root[data-skin="arcade"] .big{font-size:36px;letter-spacing:-1px}
+:root[data-skin="arcade"] h1{font-size:24px;letter-spacing:-.5px}
+:root[data-skin="arcade"] .tile{border-radius:22px}
+:root[data-skin="arcade"] .badge{color:var(--inv-ink)}
+
 </style>
 <script>
-(function(){try{var u=JSON.parse(localStorage.getItem('lockin_ui_v1')||'{}');if(u.theme==='light'||u.theme==='dark')document.documentElement.setAttribute('data-theme',u.theme);}catch(e){}})();
+(function(){try{var u=JSON.parse(localStorage.getItem('lockin_ui_v1')||'{}');if(u.theme==='light'||u.theme==='dark')document.documentElement.setAttribute('data-theme',u.theme);document.documentElement.setAttribute('data-skin',u.skin==='arcade'?'arcade':'bento');}catch(e){}})();
 </script>
 </head>
 <body>
@@ -306,12 +346,17 @@ input[type=date].field::-webkit-date-and-time-value{text-align:left}
     var path = targetPath(ctx);
     var pathNow = path ? path.at(now.date) : null;
     return { empty: false, ma: now.value, maDate: now.date, latest: latestWeight(ctx, t),
-      ch7: w7 ? now.value - w7.value : null, ch30: w30 ? now.value - w30.value : null,
+      ch7: w7 && !(isDate(ctx.chartFrom) && w7.date < ctx.chartFrom) ? now.value - w7.value : null,
+      ch30: w30 && !(isDate(ctx.chartFrom) && w30.date < ctx.chartFrom) ? now.value - w30.value : null,
       vsPath: pathNow === null ? null : now.value - pathNow };
   }
   /** Straight target line from the start weight at the target loss rate. */
   function targetPath(ctx) {
     var sd = ctx.s.start_date, sw = ctx.s.start_weight_kg;
+    if (isDate(ctx.chartFrom)) {                                  // graph restarted from a new streak
+      var f = Object.keys(ctx.daily).filter(function (d) { return d >= ctx.chartFrom && ctx.daily[d].weight !== null; }).sort()[0];
+      if (f) { sd = f; sw = ctx.daily[f].weight; }
+    }
     if (!isDate(sd) || sw === null) {
       var first = Object.keys(ctx.daily).filter(function (d) { return ctx.daily[d].weight !== null; }).sort()[0];
       if (!first) return null; sd = first; sw = ctx.daily[first].weight;
@@ -411,19 +456,20 @@ input[type=date].field::-webkit-date-and-time-value{text-align:left}
       var t = ctx.today, first = Object.keys(ctx.daily).filter(function (d) { return qualifies(ctx, d); }).sort()[0];
       var days = {};
       if (!first) return { current: 0, longest: 0, freezes: 0, days: days };
-      var run = 0, longest = 0, freezes = 0, since = 0;
+      var run = 0, longest = 0, freezes = 0, since = 0, start = null, hadBreak = false;
       range(first, t).forEach(function (d) {
         if (qualifies(ctx, d)) {
+          if (run === 0) start = d;
           run++; since++; days[d] = 'q';
           if (since % 14 === 0 && freezes < 2) freezes++;
         } else if (d === t) {
           days[d] = 'pending';                                 // today not logged yet does not break it
         } else if (freezes > 0 && run > 0) {
           freezes--; days[d] = 'frozen';
-        } else { run = 0; since = 0; days[d] = 'miss'; }
+        } else { if (run > 0) hadBreak = true; run = 0; since = 0; start = null; days[d] = 'miss'; }
         longest = Math.max(longest, run);
       });
-      return { current: run, longest: longest, freezes: freezes, days: days };
+      return { current: run, longest: longest, freezes: freezes, days: days, start: run ? start : null, restarted: hadBreak && run > 0 };
     });
   }
 
@@ -804,7 +850,7 @@ input[type=date].field::-webkit-date-and-time-value{text-align:left}
     dirty: lsGet(LS.dirty, {}),
     tomb: lsGet(LS.tomb, {}),
     sync: lsGet(LS.sync, { url: '', secret: '', last: '', status: 'idle', error: '' }),
-    ui: lsGet(LS.ui, { theme: 'system', range: '30', seenLevel: 0, showBreakdown: false }),
+    ui: lsGet(LS.ui, { theme: 'system', skin: 'bento', range: '30', seenLevel: 0, showBreakdown: false }),
     calParts: lsGet(LS.cal, {}),
     view: 'home', logDate: null, habDate: null, editor: lsGet(LS.draft, null), modal: null, toast: '', importPreview: null, inflight: false
   };
@@ -971,24 +1017,37 @@ input[type=date].field::-webkit-date-and-time-value{text-align:left}
     more: '<circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/>', left: '<path d="M15 5l-7 7 7 7"/>', right: '<path d="M9 5l7 7-7 7"/>',
     up: '<path d="M6 15l6-6 6 6"/>', down: '<path d="M6 9l6 6 6-6"/>', x: '<path d="M6 6l12 12M18 6L6 18"/>', cal: '<rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4"/>',
     flame: '<path d="M12 3c1 4 5 5 5 10a5 5 0 0 1-10 0c0-3 2-4 2-7 1.5 1 2 2.5 2 4 1-1.5 1.5-4 1-7z"/>', sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
+    menu: '<path d="M4 7h16M4 12h16M4 17h16"/>',
+    stretch: '<circle cx="12" cy="4.5" r="2"/><path d="M12 7.5v6l-4 6.5M12 13.5l4 6.5M4.5 9.5 12 8.5l7.5 1"/>',
     moon: '<path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/>', trash: '<path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/>', edit: '<path d="M4 20h4L20 8l-4-4L4 16v4z"/>'
   };
   function icon(n, size, sw) { return '<svg width="' + (size || 20) + '" height="' + (size || 20) + '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="' + (sw || 2) + '" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + ICON[n] + '</svg>'; }
+
+  // ------------------------------------------------------------------ measurement units (stored in the measure's own unit; inches can be entered/shown in cm)
+  function mIsCm(m) { return !!m && String(m.unit).toLowerCase() === 'in' && S.ui.mUnit === 'cm'; }
+  function mUnit(m) { return mIsCm(m) ? 'cm' : (m ? m.unit : ''); }
+  function mDisp(m, v) { v = C.num(v); return v === null ? null : mIsCm(m) ? C.round(v * 2.54, 1) : v; }
+  function mStore(m, v) { v = C.num(v); return v === null ? null : mIsCm(m) ? C.round(v / 2.54, 2) : v; }
 
   // ------------------------------------------------------------------ charts
   /** Stacked panels on a shared date axis (BRD 7: no dual y-axis). */
   function weightChart(ctx, rangeKey) {
     var t = ctx.today, wDates = Object.keys(ctx.daily).filter(function (d) { return ctx.daily[d].weight !== null; }).sort();
     if (!wDates.length) return '';
+    var from = C.isDate(ctx.chartFrom) ? ctx.chartFrom : null;
+    if (from) wDates = wDates.filter(function (d) { return d >= from; });
+    if (!wDates.length) return '';
     var start = rangeKey === 'all' ? wDates[0] : C.addDays(t, -(+rangeKey - 1));
-    if (rangeKey === 'all' && C.diffDays(start, t) < 13) start = C.addDays(t, -13);
+    if (from && start < from) start = from;
+    if (C.diffDays(start, t) < 6) start = C.addDays(t, -6);
     var days = C.range(start, t), n = days.length, W = 340, x0 = 30, x1 = W - 6;
     function X(i) { return x0 + (n === 1 ? 0 : i * (x1 - x0) / (n - 1)); }
     var path = C.targetPath(ctx), pts = [], ma = [], tp = [];
     days.forEach(function (d, i) {
-      var w = C.weightOn(ctx, d); if (w !== null) pts.push([i, w]);
-      var m = C.weightMA(ctx, d); ma.push(m === null ? null : [i, m]);
-      var p = path ? path.at(d) : null; if (p !== null) tp.push([i, p]);
+      var pre = from && d < from;
+      var w = C.weightOn(ctx, d); if (w !== null && !pre) pts.push([i, w]);
+      var m = pre ? null : C.weightMA(ctx, d); ma.push(m === null ? null : [i, m]);
+      var p = path ? path.at(d) : null; if (p !== null && (!from || d >= from)) tp.push([i, p]);
     });
     var vals = pts.map(function (p) { return p[1]; }).concat(ma.filter(Boolean).map(function (p) { return p[1]; }), tp.map(function (p) { return p[1]; }));
     if (!vals.length) return '';
@@ -1008,7 +1067,7 @@ input[type=date].field::-webkit-date-and-time-value{text-align:left}
     segs.forEach(function (sg) { s += sg.length > 1 ? '<polyline points="' + sg.join(' ') + '" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round"/>' : '<circle cx="' + sg[0].split(',')[0] + '" cy="' + sg[0].split(',')[1] + '" r="3" fill="currentColor"/>'; });
     // measurement panel
     var mid2 = setting('chart_measure'), mt = S.db.MeasureTypes[mid2], mp = [];
-    days.forEach(function (d, i) { var m = ctx.meas[d] && ctx.meas[d][mid2]; if (m) mp.push([i, m.value]); });
+    days.forEach(function (d, i) { var m = ctx.meas[d] && ctx.meas[d][mid2]; if (m && (!from || d >= from)) mp.push([i, mDisp(mt, m.value)]); });
     var t2 = 152, b2 = 200;
     s += '<line x1="' + x0 + '" x2="' + x1 + '" y1="' + b2 + '" y2="' + b2 + '" stroke="currentColor" stroke-opacity=".18"/>';
     if (mp.length) {
@@ -1030,7 +1089,7 @@ input[type=date].field::-webkit-date-and-time-value{text-align:left}
     C: C, S: S, TABS: TABS, KEYS: KEYS, LS: LS, lsGet: lsGet, lsSet: lsSet, lsDel: lsDel, today: today, keyOf: keyOf, persist: persist, put: put, hardDelete: hardDelete,
     setsOf: setsOf, putSession: putSession, setting: setting, setSetting: setSetting, unsyncedCount: unsyncedCount, flush: flush, pull: pull, ping: ping,
     canSync: canSync, saveSync: saveSync, syncPill: syncPill, syncStatusText: syncStatusText, refreshSyncPill: refreshSyncPill,
-    esc: esc, fmt: fmt, signed: signed, pct: pct, dLabel: dLabel, toast: toast, download: download, icon: icon, weightChart: weightChart
+    mIsCm: mIsCm, mUnit: mUnit, mDisp: mDisp, mStore: mStore, esc: esc, fmt: fmt, signed: signed, pct: pct, dLabel: dLabel, toast: toast, download: download, icon: icon, weightChart: weightChart
   };
 })();
 
@@ -1049,13 +1108,16 @@ input[type=date].field::-webkit-date-and-time-value{text-align:left}
     if (!Object.keys(S.db.MeasureTypes).length) put('MeasureTypes', { measure_id: 'waist', name: 'Waist', unit: 'in', active: 1, sort_order: 1, min: 15, max: 80 });
   }
   function applyTheme() {
-    var t = S.ui.theme;
-    if (t === 'light' || t === 'dark') document.documentElement.setAttribute('data-theme', t); else document.documentElement.removeAttribute('data-theme');
+    var t = S.ui.theme, skin = S.ui.skin === 'arcade' ? 'arcade' : 'bento', root = document.documentElement;
+    if (t === 'light' || t === 'dark') root.setAttribute('data-theme', t); else root.removeAttribute('data-theme');
+    root.setAttribute('data-skin', skin);
     var dark = t === 'dark' || (t !== 'light' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
-    var m = document.querySelector('meta[name=theme-color]'); if (m) m.setAttribute('content', dark ? '#121110' : '#F4F2EF');
+    var m = document.querySelector('meta[name=theme-color]'); if (m) m.setAttribute('content', skin === 'arcade' ? (dark ? '#0B0D10' : '#EEF1F5') : (dark ? '#121110' : '#F4F2EF'));
   }
   function saveUi() { L.lsSet(L.LS.ui, S.ui); }
-  function ctx() { return C.buildCtx(S.db, L.today()); }
+  function chartFrom() { var f = L.setting('chart_from'); return !S.ui.chartAll && C.isDate(f) ? f : ''; }
+  function ctx() { var c = C.buildCtx(S.db, L.today()); c.chartFrom = chartFrom(); return c; }
+  function stretches() { try { var a = JSON.parse(L.setting('stretches') || '[]'); return Array.isArray(a) ? a : []; } catch (e) { return []; } }
   function splitName(id) { var s = S.db.Splits[id]; return s ? s.name : (id ? 'Unknown split' : 'Blank'); }
   function exName(id) { var e = S.db.Exercises[id]; return e ? e.canonical_name : 'Unknown exercise'; }
   function activeSplits() { return Object.keys(S.db.Splits).map(function (k) { return S.db.Splits[k]; }).filter(function (s) { return +s.active !== 0; }).sort(function (a, b) { return (+a.sort_order || 0) - (+b.sort_order || 0); }); }
@@ -1069,7 +1131,7 @@ input[type=date].field::-webkit-date-and-time-value{text-align:left}
     applyTheme();
     var c = ctx(), html;
     try {
-      html = S.view === 'home' ? vHome(c) : S.view === 'log' ? vLog(c) : S.view === 'train' ? vTrain(c) : S.view === 'editor' ? vEditor(c) : S.view === 'habits' ? vHabits(c) : vMore(c);
+      html = S.view === 'home' ? vHome(c) : S.view === 'log' ? vLog(c) : S.view === 'train' ? vTrain(c) : S.view === 'editor' ? vEditor(c) : S.view === 'habits' ? vHabits(c) : S.view === 'stretch' ? vStretch(c) : vMore(c);
     } catch (e) {
       html = '<div class="err">Something went wrong drawing this screen: ' + esc(e.message) + '</div>'; console.error(e);
     }
@@ -1082,11 +1144,14 @@ input[type=date].field::-webkit-date-and-time-value{text-align:left}
   function go(v) { S.view = v; render(); }
 
   function nav() {
-    var tabs = [['home', 'home', 'Home'], ['log', 'plus', 'Log'], ['train', 'train', 'Train'], ['habits', 'check', 'Habits'], ['more', 'more', 'More']];
-    var cur = S.view === 'editor' ? 'train' : S.view;
-    return '<nav class="tabs" aria-label="Primary">' + tabs.map(function (t) {
-      return '<button data-act="go" data-v="' + t[0] + '" class="' + (cur === t[0] ? 'on' : '') + '" aria-label="' + t[2] + '"' + (cur === t[0] ? ' aria-current="page"' : '') + '>' + icon(t[1], 20) + '<span>' + t[2] + '</span></button>';
-    }).join('') + '</nav>';
+    var tabs = [['home', 'home', 'Home'], ['log', 'plus', 'Log'], ['train', 'train', 'Train'], ['habits', 'check', 'Habits'], ['stretch', 'stretch', 'Stretches'], ['more', 'more', 'More']];
+    var cur = S.view === 'editor' ? 'train' : S.view, open = !!S.navOpen;
+    var h = open ? '<div class="nav-scrim" data-act="navToggle" aria-hidden="true"></div>' : '';
+    h += '<nav class="navdial' + (open ? ' open' : '') + '" aria-label="Primary">';
+    if (open) h += '<div class="navmenu" id="navmenu">' + tabs.map(function (t) {
+      return '<button data-act="go" data-v="' + t[0] + '" class="' + (cur === t[0] ? 'on' : '') + '"' + (cur === t[0] ? ' aria-current="page"' : '') + '>' + icon(t[1], 20) + '<span>' + t[2] + '</span></button>';
+    }).join('') + '</div>';
+    return h + '<button class="navfab" data-act="navToggle" aria-expanded="' + open + '" aria-controls="navmenu" aria-label="' + (open ? 'Close menu' : 'Open menu') + '">' + icon(open ? 'x' : 'menu', 24, 2.2) + '</button></nav>';
   }
   function modal() {
     if (!S.modal) return '';
@@ -1114,21 +1179,25 @@ input[type=date].field::-webkit-date-and-time-value{text-align:left}
       h += '<div class="banner info"><div class="grow">Finish setup: ' + esc((missing.length ? missing.join(', ') : '') + (missing.length && noSplits ? ', ' : '') + (noSplits ? 'your splits' : '')) + '. The calorie engine needs height, birth year and sex.</div><button class="pill sm" data-act="go" data-v="more" data-anchor="profile">Set up</button></div>';
     }
     if (xp.level > S.ui.seenLevel) h += '<div class="banner info"><div class="grow"><b>Level up!</b> You reached level ' + xp.level + '.</div><button class="pill sm" data-act="seenLevel">Nice</button></div>';
+    var rsSeen = L.setting('restart_seen');
+    if (st.restarted && st.start && rsSeen !== st.start) h += '<div class="banner info"><div class="grow">New streak since <b>' + esc(L.dLabel(st.start)) + '</b>. Restart your weight graph from that day?</div><div class="stack" style="gap:6px"><button class="pill sm" data-act="restartGraph" data-d="' + st.start + '">Restart graph</button><button class="pill sm" style="background:rgba(127,127,127,.25);color:inherit" data-act="keepHistory" data-d="' + st.start + '">Keep history</button></div></div>';
     if (eng.state === 'ok' && eng.caution) h += '<div class="banner warn"><div class="grow"><b>Caution.</b> ' + esc(eng.cautionReason) + ' Nutrition and weight XP and badges are paused until this clears.</div></div>';
 
     // Weight
     var rk = S.ui.range || '30';
     h += '<section class="tile t-sky"><div class="between"><h2>Weight</h2><div class="seg" role="group" aria-label="Range">' +
       ['30', '90', 'all'].map(function (r) { return '<button data-act="range" data-v="' + r + '" class="' + (rk === r ? 'on' : '') + '">' + (r === 'all' ? 'All' : r + 'D') + '</button>'; }).join('') + '</div></div>';
+    var cfSet = L.setting('chart_from');
+    if (C.isDate(cfSet)) h += '<div class="seg" role="group" aria-label="Graph start" style="align-self:flex-start"><button data-act="chartAll" data-v="0" class="' + (!S.ui.chartAll ? 'on' : '') + '">Since ' + esc(L.dLabel(cfSet, { weekday: undefined })) + '</button><button data-act="chartAll" data-v="1" class="' + (S.ui.chartAll ? 'on' : '') + '">All history</button></div>';
     if (ws.empty) {
       h += '<div class="sub small">' + (ws.latest ? 'Latest ' + fmt(ws.latest.value, 1) + ' kg. ' : '') + 'Log ' + ws.need + ' more weigh-in' + (ws.need === 1 ? '' : 's') + ' this week to unlock the 7-day average.</div>';
     } else {
       h += '<div class="row" style="align-items:baseline"><span class="big">' + fmt(ws.ma, 1) + '</span><span class="unit">kg · 7-day avg</span></div>' +
-        '<div class="row wrap small"><span class="chip">7d ' + signed(ws.ch7, 1) + ' kg</span>' + (ws.ch30 !== null ? '<span class="chip">30d ' + signed(ws.ch30, 1) + ' kg</span>' : '') +
+        '<div class="row wrap small">' + (ws.ch7 !== null ? '<span class="chip">7d ' + signed(ws.ch7, 1) + ' kg</span>' : '') + (ws.ch30 !== null ? '<span class="chip">30d ' + signed(ws.ch30, 1) + ' kg</span>' : '') +
         (ws.vsPath !== null ? '<span class="chip ' + (ws.vsPath > 0.25 ? 'warn' : 'good') + '">vs target path ' + signed(ws.vsPath, 1) + ' kg</span>' : '') + '</div>';
     }
     var chart = L.weightChart(c, rk);
-    if (chart) h += '<div style="color:var(--ink)">' + chart + '</div><div class="row wrap small sub"><span>— 7-day avg</span><span>· daily</span><span style="color:var(--path)">- - target path</span><span>● ' + esc(mt ? mt.name + ' (' + mt.unit + ')' : '') + '</span></div>';
+    if (chart) h += '<div style="color:var(--ink)">' + chart + '</div><div class="row wrap small sub"><span>— 7-day avg</span><span>· daily</span><span style="color:var(--path)">- - target path</span><span>● ' + esc(mt ? mt.name + ' (' + L.mUnit(mt) + ')' : '') + '</span></div>';
     h += '</section>';
 
     // Calorie engine: pace in kg is the headline
@@ -1202,7 +1271,7 @@ input[type=date].field::-webkit-date-and-time-value{text-align:left}
       '</div><div>' +
       todo('Weight', d0.weight !== null && d0.weight !== undefined ? fmt(d0.weight, 1) + ' kg' : 'log', 'log') +
       todo('Calories', d0.calories !== null && d0.calories !== undefined ? fmt(d0.calories) + (d0.complete ? ' · complete' : ' · open') : 'log', 'log') +
-      (mt ? todo(mt.name, mToday ? fmt(mToday.value, 1) + ' ' + mt.unit : '— optional', 'log') : '') +
+      (mt ? todo(mt.name, mToday ? fmt(L.mDisp(mt, mToday.value), 1) + ' ' + L.mUnit(mt) : '— optional', 'log') : '') +
       todo('Workout', todays.length ? todays.map(function (s) { return splitName(s.split_id); }).join(', ') + ' · done' : d0.rest ? 'rest day' : 'log', todays.length || d0.rest ? 'train' : 'train') +
       todo('Habits', hd.active ? hd.done + ' / ' + hd.active : 'none active', 'habits') + '</div>';
     if (!todays.length) {
@@ -1224,7 +1293,7 @@ input[type=date].field::-webkit-date-and-time-value{text-align:left}
     var r = S.db.DailyLog[d] || {}, dr = S.logDraft[d] || {};
     function pick(k, saved) { return k in dr ? dr[k] : (saved === undefined || saved === null ? '' : String(saved)); }
     var st = { weight: pick('weight', r.weight_kg), cal: pick('cal', r.calories_kcal), note: pick('note', r.note), complete: 'complete' in dr ? dr.complete : +r.day_complete === 1, meas: {} };
-    measures(true).forEach(function (m) { var mr = S.db.Measurements[d + '|' + m.measure_id]; st.meas[m.measure_id] = pick('m_' + m.measure_id, mr ? mr.value : ''); });
+    measures(true).forEach(function (m) { var mr = S.db.Measurements[d + '|' + m.measure_id]; var dv = mr ? L.mDisp(m, mr.value) : null; st.meas[m.measure_id] = pick('m_' + m.measure_id, dv === null ? '' : dv); });
     return st;
   }
   function vLog(c) {
@@ -1245,7 +1314,10 @@ input[type=date].field::-webkit-date-and-time-value{text-align:left}
     var prev = C.latestWeight(c, C.addDays(d, -1));
     h += '<div class="grid2"><section class="tile t-sky" style="gap:4px"><label class="lbl" for="f-weight">Weight · kg</label><input id="f-weight" class="bigin" inputmode="decimal" placeholder="–" value="' + esc(f.weight) + '" data-in="logf" data-f="weight" autocomplete="off"><span class="small sub">' + (prev ? 'prev ' + fmt(prev.value, 1) + ' (' + esc(L.dLabel(prev.date, { weekday: undefined })) + ')' : 'first reading') + '</span></section>';
     measures(true).forEach(function (m) {
-      h += '<section class="tile" style="gap:4px"><label class="lbl" for="f-m-' + esc(m.measure_id) + '">' + esc(m.name) + ' · ' + esc(m.unit) + '</label><input id="f-m-' + esc(m.measure_id) + '" class="bigin" inputmode="decimal" placeholder="–" value="' + esc(f.meas[m.measure_id]) + '" data-in="logf" data-f="m_' + esc(m.measure_id) + '" autocomplete="off"><span class="small muted">optional</span></section>';
+      var canCm = String(m.unit).toLowerCase() === 'in';
+      h += '<section class="tile" style="gap:4px"><div class="between"><label class="lbl" style="margin:0" for="f-m-' + esc(m.measure_id) + '">' + esc(m.name) + ' · ' + esc(L.mUnit(m)) + '</label>' +
+        (canCm ? '<div class="seg" role="group" aria-label="' + esc(m.name) + ' unit" style="padding:2px"><button data-act="mUnit" data-v="in" class="' + (S.ui.mUnit !== 'cm' ? 'on' : '') + '" style="min-height:26px;padding:3px 8px">in</button><button data-act="mUnit" data-v="cm" class="' + (S.ui.mUnit === 'cm' ? 'on' : '') + '" style="min-height:26px;padding:3px 8px">cm</button></div>' : '') + '</div>' +
+        '<input id="f-m-' + esc(m.measure_id) + '" class="bigin" inputmode="decimal" placeholder="–" value="' + esc(f.meas[m.measure_id]) + '" data-in="logf" data-f="m_' + esc(m.measure_id) + '" autocomplete="off"><span class="small muted">optional</span></section>';
     });
     h += '</div>';
     var parts = S.calParts[d] || [];
@@ -1336,7 +1408,7 @@ input[type=date].field::-webkit-date-and-time-value{text-align:left}
       if (hasGhost) h += '<button class="pill soft" data-act="acceptAll">Accept all last-session values</button>';
       h += '<datalist id="exlist">' + Object.keys(S.db.Exercises).map(function (k) { return S.db.Exercises[k]; }).filter(function (x) { return +x.archived !== 1; }).map(function (x) { return '<option value="' + esc(x.canonical_name) + '">'; }).join('') + '</datalist>';
       h += e.exercises.map(function (x, i) { return exCard(x, i, e.exercises.length); }).join('');
-      h += '<button class="pill ghost" style="height:52px" data-act="addEx">+ Add exercise</button>';
+      h += '<div class="row"><button class="pill ghost grow" style="height:52px" data-act="addEx">+ New exercise</button><button class="pill ghost grow" style="height:52px" data-act="addFromRoutines">+ From other routines</button></div>';
     }
     h += '<section class="tile"><label class="lbl" for="e-note">Session note</label><input id="e-note" class="field" value="' + esc(e.note || '') + '" data-in="enote" placeholder="Optional"></section>';
     h += '<div id="editerr"></div><button class="btn-primary" data-act="saveSession">' + (e.isPlan ? 'Save plan' : e.isNew ? 'Finish session' : 'Save changes') + '</button>' +
@@ -1455,10 +1527,27 @@ input[type=date].field::-webkit-date-and-time-value{text-align:left}
   }
 
   // ------------------------------------------------------------------ MORE
+  function vStretch(c) {
+    var list = stretches();
+    var h = '<header class="between" style="margin-bottom:10px"><h1>Stretches</h1>' + L.syncPill() + '</header><div class="stack">';
+    h += '<section class="tile t-mint"><div class="between"><h2>Your stretches</h2><span class="small sub">' + list.length + '</span></div>' +
+      (list.length ? '<div class="list">' + list.map(function (x, i) {
+        return '<div class="li"><span class="grow b">' + esc(x.name) + '</span>' +
+          '<button class="iconbtn sm clear" data-act="stMove" data-i="' + i + '" data-n="-1" aria-label="Move up"' + (i === 0 ? ' disabled' : '') + '>' + icon('up', 18) + '</button>' +
+          '<button class="iconbtn sm clear" data-act="stMove" data-i="' + i + '" data-n="1" aria-label="Move down"' + (i === list.length - 1 ? ' disabled' : '') + '>' + icon('down', 18) + '</button>' +
+          '<button class="iconbtn sm clear" data-act="stRename" data-i="' + i + '" aria-label="Rename ' + esc(x.name) + '">' + icon('edit', 18) + '</button>' +
+          '<button class="iconbtn sm clear" data-act="stDelete" data-i="' + i + '" aria-label="Delete ' + esc(x.name) + '">' + icon('trash', 18) + '</button></div>';
+      }).join('') + '</div>' : '<span class="small sub">No stretches yet. Add the ones you do before or after training.</span>') +
+      '<div class="row"><label class="sr" for="st-name">New stretch</label><input id="st-name" class="field grow" placeholder="e.g. Couch stretch" autocomplete="off"><button class="pill dark" data-act="stAdd">Add</button></div></section>';
+    return h + '</div>';
+  }
   function vMore(c) {
     var s = c.s, an = S.anchor;
     function sec(id, title, body) { return '<details class="tile" id="sec-' + id + '"' + (an === id ? ' open' : '') + '><summary class="between"><h2>' + title + '</h2>' + icon('down', 18) + '</summary><div class="stack" style="margin-top:12px">' + body + '</div></details>'; }
-    var h = '<header class="between" style="margin-bottom:10px"><h1>More</h1><div class="seg" role="group" aria-label="Theme">' + ['system', 'light', 'dark'].map(function (t) { return '<button data-act="theme" data-v="' + t + '" class="' + (S.ui.theme === t ? 'on' : '') + '">' + (t === 'system' ? 'Auto' : t === 'light' ? icon('sun', 16) : icon('moon', 16)) + '</button>'; }).join('') + '</div></header><div class="stack">';
+    var h = '<header class="between" style="margin-bottom:10px"><h1>More</h1>' + L.syncPill() + '</header><div class="stack">';
+    h += '<section class="tile"><h2>Appearance</h2><div class="between"><span class="b">Theme</span><div class="seg" role="group" aria-label="Theme">' +
+      [['bento', 'Bento'], ['arcade', 'Arcade']].map(function (x) { return '<button data-act="skin" data-v="' + x[0] + '" class="' + ((S.ui.skin || 'bento') === x[0] ? 'on' : '') + '">' + x[1] + '</button>'; }).join('') + '</div></div>' +
+      '<div class="between"><span class="b">Mode</span><div class="seg" role="group" aria-label="Light or dark">' + ['system', 'light', 'dark'].map(function (t) { return '<button data-act="theme" data-v="' + t + '" class="' + (S.ui.theme === t ? 'on' : '') + '" aria-label="' + t + '">' + (t === 'system' ? 'Auto' : t === 'light' ? icon('sun', 16) + ' Light' : icon('moon', 16) + ' Dark') + '</button>'; }).join('') + '</div></div></section>';
     // Profile
     var p = '<div class="formgrid">' + fld('p-height', 'Height (cm)', s.height_cm || '', 'decimal') + fld('p-by', 'Birth year', s.birth_year || '', 'numeric') +
       '<div><label class="lbl" for="p-sex">Sex (for BMR)</label><select id="p-sex" class="field"><option value="">–</option><option value="male"' + (s.sex === 'male' ? ' selected' : '') + '>Male</option><option value="female"' + (s.sex === 'female' ? ' selected' : '') + '>Female</option></select></div>' +
@@ -1519,7 +1608,7 @@ input[type=date].field::-webkit-date-and-time-value{text-align:left}
   function fld(id, label, value, mode, ph) { return '<div><label class="lbl" for="' + id + '">' + esc(label) + '</label><input id="' + id + '" class="field" value="' + esc(value) + '"' + (mode === 'url' ? ' type="url"' : ' inputmode="' + (mode || 'text') + '"') + (ph ? ' placeholder="' + esc(ph) + '"' : '') + ' autocomplete="off"></div>'; }
 
   window.LockinViews = { render: render, go: go, A: A, IN: IN, CH: CH, ctx: ctx, seed: seed, saveUi: saveUi, saveDraft: saveDraft, openModal: openModal, closeModal: closeModal, modalErr: modalErr, val: val,
-    splitName: splitName, exName: exName, plans: plans, activeSplits: activeSplits, measures: measures, logState: logState, calChips: calChips, emptySets: emptySets, editorFromSession: editorFromSession,
+    splitName: splitName, exName: exName, plans: plans, stretches: stretches, activeSplits: activeSplits, measures: measures, logState: logState, calChips: calChips, emptySets: emptySets, editorFromSession: editorFromSession,
     lastOfSplit: lastOfSplit, committed: committed, gridToText: gridToText, textToGrid: textToGrid, textErrors: textErrors, liveEditor: liveEditor };
 })();
 
@@ -1537,7 +1626,7 @@ input[type=date].field::-webkit-date-and-time-value{text-align:left}
 
   // ------------------------------------------------------------------ navigation & dashboard
   A.go = function (el) {
-    var v = el.dataset.v; S.anchor = el.dataset.anchor || null;
+    var v = el.dataset.v; S.anchor = el.dataset.anchor || null; S.navOpen = false;
     if (v === 'log' && !S.logDate) S.logDate = today();
     S.view = v; render();
     if (S.anchor) { var sec = document.getElementById('sec-' + S.anchor); if (sec) sec.scrollIntoView({ block: 'start' }); }
@@ -1547,6 +1636,22 @@ input[type=date].field::-webkit-date-and-time-value{text-align:left}
   A.range = function (el) { S.ui.range = el.dataset.v; V.saveUi(); render(); };
   A.toggleBreakdown = function () { S.ui.showBreakdown = !S.ui.showBreakdown; V.saveUi(); render(); };
   A.theme = function (el) { S.ui.theme = el.dataset.v; V.saveUi(); render(); };
+  A.skin = function (el) { S.ui.skin = el.dataset.v; V.saveUi(); render(); };
+  A.navToggle = function () { S.navOpen = !S.navOpen; render(); var b = document.querySelector(S.navOpen ? '#navmenu button' : '.navfab'); if (b) b.focus(); };
+  A.chartAll = function (el) { S.ui.chartAll = el.dataset.v === '1'; V.saveUi(); render(); };
+  A.restartGraph = function (el) { S.ui.chartAll = false; V.saveUi(); L.setSetting('chart_from', el.dataset.d); L.setSetting('restart_seen', el.dataset.d); L.toast('Weight graph restarted from ' + L.dLabel(el.dataset.d)); render(); };
+  A.keepHistory = function (el) { L.setSetting('chart_from', ''); L.setSetting('restart_seen', el.dataset.d); L.toast('Keeping your full history'); render(); };
+  A.mUnit = function (el) {
+    var to = el.dataset.v, from = S.ui.mUnit === 'cm' ? 'cm' : 'in'; if (to === from) return;
+    Object.keys(S.logDraft).forEach(function (d) {               // convert any unsaved entries so nothing changes meaning
+      Object.keys(S.logDraft[d]).forEach(function (k) {
+        if (k.indexOf('m_') !== 0) return; var m = S.db.MeasureTypes[k.slice(2)], v = C.num(S.logDraft[d][k]);
+        if (!m || v === null || String(m.unit).toLowerCase() !== 'in') return;
+        S.logDraft[d][k] = String(to === 'cm' ? C.round(v * 2.54, 1) : C.round(v / 2.54, 2));
+      });
+    });
+    S.ui.mUnit = to; V.saveUi(); render();
+  };
   A.rest = function (el) {
     var d = el.dataset.d, on = el.dataset.on === '1', c = V.ctx(), ra = C.restAllowance(c, d);
     if (on && ra.used >= ra.allowed) { L.toast('No rest days left that week'); return; }
@@ -1586,9 +1691,9 @@ input[type=date].field::-webkit-date-and-time-value{text-align:left}
     if (cal !== null && (cal < C.LIMITS.calories[0] || cal > C.LIMITS.calories[1])) errs.push('Calories must be between 0 and 10,000.');
     var mvals = {};
     V.measures(true).forEach(function (m) {
-      var raw = f.meas[m.measure_id], v = C.num(raw);
+      var raw = f.meas[m.measure_id], v = L.mStore(m, raw);
       if (String(raw).trim() !== '' && v === null) errs.push(m.name + ' is not a number.');
-      if (v !== null && ((C.num(m.min) !== null && v < +m.min) || (C.num(m.max) !== null && v > +m.max))) errs.push(m.name + ' must be between ' + m.min + ' and ' + m.max + ' ' + m.unit + '.');
+      if (v !== null && ((C.num(m.min) !== null && v < +m.min) || (C.num(m.max) !== null && v > +m.max))) errs.push(m.name + ' must be between ' + L.mDisp(m, m.min) + ' and ' + L.mDisp(m, m.max) + ' ' + L.mUnit(m) + '.');
       mvals[m.measure_id] = v;
     });
     if (errs.length) return showErr('logerr', errs.join(' '));
@@ -1669,6 +1774,61 @@ input[type=date].field::-webkit-date-and-time-value{text-align:left}
   function accept(x) { x.sets.forEach(function (s) { if (s.gr !== undefined && s.gr !== null && String(s.r).trim() === '') { s.r = String(s.gr); s.w = s.gw === null || s.gw === undefined ? '' : String(s.gw); } }); }
   A.acceptAll = function () { S.editor.exercises.forEach(accept); V.saveDraft(); render(); };
   A.sameAsLast = function (el) { accept(S.editor.exercises[+el.dataset.i]); V.saveDraft(); render(); };
+  function saveStretches(list) { L.setSetting('stretches', JSON.stringify(list)); render(); }
+  A.stAdd = function () {
+    var n = val('st-name').trim(); if (!n) { L.toast('Name the stretch'); return; }
+    var list = V.stretches(); if (list.some(function (x) { return C.normName(x.name) === C.normName(n); })) { L.toast('Already in your list'); return; }
+    list.push({ id: C.uid('st'), name: n }); saveStretches(list);
+    var f = document.getElementById('st-name'); if (f) f.focus();
+  };
+  A.stMove = function (el) { var a = V.stretches(), i = +el.dataset.i, j = i + +el.dataset.n; if (j < 0 || j >= a.length) return; var t = a[i]; a[i] = a[j]; a[j] = t; saveStretches(a); };
+  A.stDelete = function (el) { var a = V.stretches(), x = a[+el.dataset.i]; if (!x || !confirm('Delete “' + x.name + '”?')) return; a.splice(+el.dataset.i, 1); saveStretches(a); };
+  A.stRename = function (el) {
+    var a = V.stretches(), i = +el.dataset.i, x = a[i]; if (!x) return;
+    V.openModal({ title: 'Rename stretch', html: '<label class="lbl" for="m-name">Name</label><input id="m-name" class="field" value="' + esc(x.name) + '">',
+      onOk: function () { var n = val('m-name').trim(); if (!n) return V.modalErr('Enter a name.'); a[i].name = n; S.modal = null; saveStretches(a); return true; } });
+  };
+  /** Latest performed sets of an exercise from any routine (done sessions first, then plans), as ghost values. */
+  function lastSetsOf(c, exId) {
+    var pools = [c.sessions.slice().reverse(), V.plans()];
+    for (var p = 0; p < pools.length; p++) for (var k = 0; k < pools[p].length; k++) {
+      var sets = (c.setsBy[pools[p][k].session_id] || []).filter(function (x) { return x.exercise_id === exId && x.set_no > 0 && x.r !== null; });
+      if (sets.length) return sets.map(function (x) { return { w: '', r: '', gw: x.w, gr: x.r }; });
+    }
+    return null;
+  }
+  A.addFromRoutines = function () {
+    var c = V.ctx(), inEditor = {}, seen = {}, groups = [];
+    S.editor.exercises.forEach(function (x) { var e = x.exercise_id || (C.findExercise(S.db, x.name) || {}).exercise_id; if (e) inEditor[e] = 1; });
+    var all = Object.keys(S.db.WorkoutSessions).map(function (k) { return S.db.WorkoutSessions[k]; }).filter(function (x) { return x.status === 'done' || x.status === 'plan'; })
+      .sort(function (a, b) { return a.date < b.date ? 1 : -1; });
+    var splitsOrder = Object.keys(S.db.Splits).map(function (k) { return S.db.Splits[k]; }).sort(function (a, b) { return (+a.sort_order || 0) - (+b.sort_order || 0); });
+    splitsOrder.concat([{ split_id: '', name: 'Blank sessions' }]).forEach(function (sp) {
+      var ids = [];
+      all.filter(function (x) { return (x.split_id || '') === sp.split_id; }).forEach(function (x) {
+        (c.setsBy[x.session_id] || []).forEach(function (st) { var ex = S.db.Exercises[st.exercise_id]; if (ex && !ex.merged_into && +ex.archived !== 1 && ids.indexOf(st.exercise_id) < 0) ids.push(st.exercise_id); });
+      });
+      ids = ids.filter(function (id) { return !seen[id]; }); ids.forEach(function (id) { seen[id] = 1; });
+      if (ids.length) groups.push({ name: sp.name, ids: ids });
+    });
+    var rest = Object.keys(S.db.Exercises).filter(function (k) { var e = S.db.Exercises[k]; return !seen[k] && !e.merged_into && +e.archived !== 1; });
+    if (rest.length) groups.push({ name: 'Other exercises', ids: rest });
+    if (!groups.length) { L.toast('No exercises saved yet'); return; }
+    var html = '<p class="small muted" style="margin:0">Pick any exercises to add to this session. Each comes with its last weights and reps as ghost values.</p>' + groups.map(function (g) {
+      return '<div class="card stack" style="gap:0;padding:8px 14px"><div class="b" style="padding:6px 0">' + esc(g.name) + '</div>' + g.ids.map(function (id) {
+        var e = S.db.Exercises[id], last = lastSetsOf(c, id), lbl = last ? last.map(function (x) { return (x.gw ? C.fmtNum(x.gw) + '×' : '') + x.gr; }).join(', ') : 'no sets yet';
+        return '<label class="check" style="min-height:44px"><input type="checkbox" class="pickex" value="' + esc(id) + '"' + (inEditor[id] ? ' disabled' : '') + '><span class="grow">' + esc(e.canonical_name) + '<br><span class="small muted">' + (inEditor[id] ? 'already in this session' : esc(lbl)) + '</span></span></label>';
+      }).join('') + '</div>';
+    }).join('');
+    V.openModal({ title: 'Add from other routines', html: html, okLabel: 'Add selected',
+      onOk: function () {
+        var picked = Array.prototype.map.call(document.querySelectorAll('.pickex:checked'), function (x) { return x.value; });
+        if (!picked.length) return V.modalErr('Tick at least one exercise.');
+        var c2 = V.ctx();
+        picked.forEach(function (id) { var e = S.db.Exercises[id]; S.editor.exercises.push({ exercise_id: id, name: e.canonical_name, type: e.type === 'bodyweight' ? 'bodyweight' : 'loaded', sets: lastSetsOf(c2, id) || V.emptySets(3) }); });
+        V.saveDraft(); S.modal = null; L.toast('Added ' + picked.length + ' exercise' + (picked.length > 1 ? 's' : '')); render(); return true;
+      } });
+  };
   A.addEx = function () { S.editor.exercises.push({ exercise_id: null, name: '', type: 'loaded', sets: V.emptySets(3) }); V.saveDraft(); render(); var i = S.editor.exercises.length - 1, n = document.getElementById('exn-' + i); if (n) { n.focus(); n.scrollIntoView({ block: 'center' }); } };
   A.exMove = function (el) { var a = S.editor.exercises, i = +el.dataset.i, j = i + +el.dataset.n; if (j < 0 || j >= a.length) return; var t = a[i]; a[i] = a[j]; a[j] = t; V.saveDraft(); render(); };
   A.exRemove = function (el) { var x = S.editor.exercises[+el.dataset.i]; if (V.committed(x).length && !confirm('Remove ' + (x.name || 'this exercise') + ' from this session?')) return; S.editor.exercises.splice(+el.dataset.i, 1); V.saveDraft(); render(); };
@@ -1972,7 +2132,8 @@ input[type=date].field::-webkit-date-and-time-value{text-align:left}
   document.addEventListener('change', function (ev) { var el = ev.target.closest('[data-ch]'); if (el && CH[el.dataset.ch]) CH[el.dataset.ch](el, ev); else { var el2 = ev.target.closest('[data-in]'); if (el2 && el2.type === 'checkbox' && IN[el2.dataset.in]) IN[el2.dataset.in](el2, ev); } });
   document.addEventListener('keydown', function (ev) {
     if (ev.key === 'Enter' && ev.target.id === 'f-caladd') { ev.preventDefault(); A.calAdd(); }
-    if (ev.key === 'Escape' && S.modal) V.closeModal();
+    if (ev.key === 'Enter' && ev.target.id === 'st-name') { ev.preventDefault(); A.stAdd(); }
+    if (ev.key === 'Escape' && S.modal) V.closeModal(); else if (ev.key === 'Escape' && S.navOpen) A.navToggle();
   });
   if (window.matchMedia) { var mq = window.matchMedia('(prefers-color-scheme: dark)'); if (mq.addEventListener) mq.addEventListener('change', function () { if (S.ui.theme === 'system') render(); }); }
 
