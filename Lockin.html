@@ -307,12 +307,21 @@ input[type=date].field::-webkit-date-and-time-value{text-align:left}
     var sessions = Object.keys(db.WorkoutSessions || {}).map(function (k) { return db.WorkoutSessions[k]; })
       .filter(function (s) { return s.status === 'done' && isDate(s.date); })
       .sort(function (a, b) { return a.date < b.date ? -1 : a.date > b.date ? 1 : String(a.created_at) < String(b.created_at) ? -1 : 1; });
+    // Activity sessions (tennis, walk…): every set row points at an exercise of type 'activity'.
+    // Derived here, never written to a row, so the sheet schema is unchanged.
+    var exType = {}, activity = {};
+    Object.keys(db.Exercises || {}).forEach(function (k) { exType[k] = db.Exercises[k].type; });
+    Object.keys(db.WorkoutSessions || {}).forEach(function (k) {
+      var st = setsBy[k] || [];
+      if (st.length && st.every(function (x) { return exType[x.exercise_id] === 'activity'; })) activity[k] = true;
+    });
+    var lifts = sessions.filter(function (s) { return !activity[s.session_id]; });
     var habits = Object.keys(db.Habits || {}).map(function (k) { return db.Habits[k]; })
       .sort(function (a, b) { return (num(a.sort_order) || 0) - (num(b.sort_order) || 0); });
     var allDates = Object.keys(daily).concat(Object.keys(meas), sessions.map(function (s) { return s.date; }));
     Object.keys(db.HabitLogs || {}).forEach(function (k) { if (num(db.HabitLogs[k].done) === 1) allDates.push(db.HabitLogs[k].date); });
     allDates = allDates.filter(isDate).sort();
-    return { db: db, today: today, s: settings, daily: daily, meas: meas, setsBy: setsBy, sessions: sessions, habits: habits,
+    return { db: db, today: today, s: settings, daily: daily, meas: meas, setsBy: setsBy, sessions: sessions, lifts: lifts, activity: activity, habits: habits,
       firstDate: allDates[0] || today, _cache: {} };
   }
   function memo(ctx, key, fn) { if (!(key in ctx._cache)) ctx._cache[key] = fn(); return ctx._cache[key]; }
@@ -507,7 +516,7 @@ input[type=date].field::-webkit-date-and-time-value{text-align:left}
   }
   function prevSameSplit(ctx, session) {
     var prev = null;
-    ctx.sessions.forEach(function (s) {
+    ctx.lifts.forEach(function (s) {
       if (s.session_id === session.session_id || s.split_id !== session.split_id) return;
       if (s.date < session.date || (s.date === session.date && String(s.created_at) < String(session.created_at))) prev = s;
     });
@@ -518,7 +527,7 @@ input[type=date].field::-webkit-date-and-time-value{text-align:left}
   function blocks(ctx) {
     return memo(ctx, 'blocks', function () {
       var N = Math.max(1, Math.round(ctx.s.block_size)), list = [];
-      for (var i = 0; i < ctx.sessions.length; i += N) list.push(ctx.sessions.slice(i, i + N));
+      for (var i = 0; i < ctx.lifts.length; i += N) list.push(ctx.lifts.slice(i, i + N));
       var out = list.map(function (ss, idx) {
         var load = 0, byEx = {}, splits = {};
         ss.forEach(function (s) {
@@ -809,6 +818,17 @@ input[type=date].field::-webkit-date-and-time-value{text-align:left}
       var w = intakeWindow(buildCtx(db, today), today); return w.logged === 1 && w.avg === 0 || JSON.stringify(w);
     });
     t('Estimated 1RM PR flag: w × (1 + reps/30)', function () { return near(e1rm(37, 12), 51.8, 0.001) && near(e1rm(38, 12), 53.2, 0.001) || 'bad'; });
+    t('Activity session (name only) closes Train ring but stays out of load blocks', function () {
+      var db = emptyDb(), today = '2026-10-04';
+      db.Exercises.ex_t = { exercise_id: 'ex_t', canonical_name: 'Tennis', type: 'activity' };
+      db.Exercises.ex_r = { exercise_id: 'ex_r', canonical_name: 'Rows', type: 'loaded' };
+      db.WorkoutSessions.s1 = { session_id: 's1', date: '2026-10-03', split_id: '', status: 'done', created_at: '1' };
+      db.WorkoutSessions.s2 = { session_id: 's2', date: '2026-10-04', split_id: '', status: 'done', created_at: '2' };
+      db.WorkoutSets.a = { set_id: 'a', session_id: 's1', exercise_id: 'ex_r', exercise_order: 1, set_no: 1, weight_kg: 40, reps: 10 };
+      db.WorkoutSets.b = { set_id: 'b', session_id: 's2', exercise_id: 'ex_t', exercise_order: 1, set_no: 0, weight_kg: '', reps: '' };
+      var c = buildCtx(db, today), bl = blocks(c), rg = ring(c, today);
+      return c.activity.s2 === true && !c.activity.s1 && rg.train && bl.length === 1 && bl[0].count === 1 && bl[0].avg === 400 || JSON.stringify({ act: c.activity, n: bl.length });
+    });
     return res;
   }
 
@@ -1120,6 +1140,13 @@ input[type=date].field::-webkit-date-and-time-value{text-align:left}
   function stretches() { try { var a = JSON.parse(L.setting('stretches') || '[]'); return Array.isArray(a) ? a : []; } catch (e) { return []; } }
   function splitName(id) { var s = S.db.Splits[id]; return s ? s.name : (id ? 'Unknown split' : 'Blank'); }
   function exName(id) { var e = S.db.Exercises[id]; return e ? e.canonical_name : 'Unknown exercise'; }
+  /** Display name of a session: activity name(s) for name-only sessions, otherwise the split. */
+  function sessionLabel(c, s) {
+    if (!c.activity[s.session_id]) return splitName(s.split_id);
+    var names = []; (c.setsBy[s.session_id] || []).forEach(function (x) { var n = exName(x.exercise_id); if (names.indexOf(n) < 0) names.push(n); });
+    return names.join(' + ') || 'Activity';
+  }
+  function activityList() { return Object.keys(S.db.Exercises).map(function (k) { return S.db.Exercises[k]; }).filter(function (e) { return e.type === 'activity' && !e.merged_into && +e.archived !== 1; }).sort(function (a, b) { return a.canonical_name.localeCompare(b.canonical_name); }); }
   function activeSplits() { return Object.keys(S.db.Splits).map(function (k) { return S.db.Splits[k]; }).filter(function (s) { return +s.active !== 0; }).sort(function (a, b) { return (+a.sort_order || 0) - (+b.sort_order || 0); }); }
   function plans(split) { return Object.keys(S.db.WorkoutSessions).map(function (k) { return S.db.WorkoutSessions[k]; }).filter(function (x) { return x.status === 'plan' && (split === undefined || (x.split_id || '') === (split || '')); })
     .sort(function (a, b) { var sa = S.db.Splits[a.split_id], sb = S.db.Splits[b.split_id]; return ((sa && +sa.sort_order) || 99) - ((sb && +sb.sort_order) || 99); }); }
@@ -1272,7 +1299,7 @@ input[type=date].field::-webkit-date-and-time-value{text-align:left}
       todo('Weight', d0.weight !== null && d0.weight !== undefined ? fmt(d0.weight, 1) + ' kg' : 'log', 'log') +
       todo('Calories', d0.calories !== null && d0.calories !== undefined ? fmt(d0.calories) + (d0.complete ? ' · complete' : ' · open') : 'log', 'log') +
       (mt ? todo(mt.name, mToday ? fmt(L.mDisp(mt, mToday.value), 1) + ' ' + L.mUnit(mt) : '— optional', 'log') : '') +
-      todo('Workout', todays.length ? todays.map(function (s) { return splitName(s.split_id); }).join(', ') + ' · done' : d0.rest ? 'rest day' : 'log', todays.length || d0.rest ? 'train' : 'train') +
+      todo('Workout', todays.length ? todays.map(function (s) { return sessionLabel(c, s); }).join(', ') + ' · done' : d0.rest ? 'rest day' : 'log', todays.length || d0.rest ? 'train' : 'train') +
       todo('Habits', hd.active ? hd.done + ' / ' + hd.active : 'none active', 'habits') + '</div>';
     if (!todays.length) {
       if (d0.rest) h += '<button class="pill sm soft" style="color:var(--inv-ink);background:rgba(127,127,127,.25)" data-act="rest" data-d="' + t + '" data-on="0">Rest day · undo</button>';
@@ -1327,8 +1354,8 @@ input[type=date].field::-webkit-date-and-time-value{text-align:left}
       (d === t ? '<label class="check"><input type="checkbox" id="f-complete" data-in="logf" data-f="complete"' + (f.complete ? ' checked' : '') + '>Day complete: include today in the ' + c.s.intake_window + '-day average</label>' : '') + '</section>';
     // training / rest
     var sess = c.sessions.filter(function (s) { return s.date === d; }), dl = c.daily[d], ra = C.restAllowance(c, d);
-    h += '<section class="tile t-mint"><div class="between"><h3>Training</h3><button class="pill sm" data-act="newSession" data-d="' + d + '">Log workout</button></div>' +
-      (sess.length ? sess.map(function (s) { return '<button class="pill sm soft" data-act="editSession" data-id="' + esc(s.session_id) + '">' + esc(splitName(s.split_id)) + ' · ' + fmt(C.sessionStats(c, s.session_id).load) + ' kg</button>'; }).join('') :
+    h += '<section class="tile t-mint"><div class="between"><h3>Training</h3><div class="row"><button class="pill sm soft" data-act="logActivity" data-d="' + d + '">+ Activity</button><button class="pill sm" data-act="newSession" data-d="' + d + '">Log workout</button></div></div>' +
+      (sess.length ? sess.map(function (s) { return '<button class="pill sm soft" data-act="editSession" data-id="' + esc(s.session_id) + '">' + esc(sessionLabel(c, s)) + (c.activity[s.session_id] ? ' · activity' : ' · ' + fmt(C.sessionStats(c, s.session_id).load) + ' kg') + '</button>'; }).join('') :
         (dl && dl.rest ? '<button class="pill sm soft" data-act="rest" data-d="' + d + '" data-on="0">Rest day · undo</button>' :
           (ra.used < ra.allowed ? '<button class="pill sm soft" data-act="rest" data-d="' + d + '" data-on="1">Mark rest day (' + (ra.allowed - ra.used) + ' left that week)</button>' : '<span class="small sub">No rest days left that week (' + ra.allowed + ' allowed with ' + c.s.planned_per_week + ' planned sessions).</span>'))) + '</section>';
     // habits for that date
@@ -1351,6 +1378,10 @@ input[type=date].field::-webkit-date-and-time-value{text-align:left}
     var sp = activeSplits();
     h += '<section class="tile t-mint"><h2>Start a session</h2><div class="row wrap">' + sp.map(function (s) { return '<button class="pill" data-act="newSession" data-split="' + esc(s.split_id) + '">' + esc(s.name) + '</button>'; }).join('') +
       '<button class="pill ghost" data-act="newSession" data-split="">Blank</button></div>' + (sp.length ? '' : '<span class="small sub">Add your splits (Push, Pull, Legs…) in More › Splits.</span>') + '</section>';
+    var acts = activityList();
+    h += '<section class="tile t-butter"><h2>Log an activity</h2><span class="small sub">Name only: tennis, a walk, a swim. Closes Train for the day and earns workout XP; kept out of load blocks and cadence.</span><div class="row wrap">' +
+      acts.map(function (a) { return '<button class="pill" data-act="logActivity" data-name="' + esc(a.canonical_name) + '">' + esc(a.canonical_name) + '</button>'; }).join('') +
+      '<button class="pill ghost" data-act="logActivity">+ ' + (acts.length ? 'Other' : 'Add activity') + '</button></div></section>';
     var pl = plans();
     if (pl.length) h += '<section class="tile"><h2>Your routine</h2><span class="small muted">Start from the plan: its weights and reps appear as ghost values you accept or overwrite.</span>' + pl.map(function (p) {
       var names = [], seen = {}; (c.setsBy[p.session_id] || []).forEach(function (x) { if (!seen[x.exercise_id]) { seen[x.exercise_id] = 1; names.push(exName(x.exercise_id)); } });
@@ -1362,12 +1393,13 @@ input[type=date].field::-webkit-date-and-time-value{text-align:left}
     h += '<section class="tile"><h2>History</h2>' + (list.length ? '<div class="list">' + list.slice(0, S.histN || 25).map(function (s) {
       var stt = C.sessionStats(c, s.session_id), prev = C.prevSameSplit(c, s), pl = prev ? C.sessionStats(c, prev.session_id).load : null;
       var nEx = {}; C.performedSets(c, s.session_id).forEach(function (x) { nEx[x.exercise_id] = 1; });
+      if (c.activity[s.session_id]) return '<button class="li" style="width:100%;border-left:0;border-right:0;border-bottom:0;background:none;text-align:left;color:var(--ink)" data-act="editSession" data-id="' + esc(s.session_id) + '"><div class="grow"><div class="b">' + esc(sessionLabel(c, s)) + '</div><div class="small muted">' + esc(L.dLabel(s.date, { year: 'numeric' })) + (s.note ? ' · ' + esc(s.note) : '') + '</div></div><div class="right small muted">activity</div></button>';
       return '<button class="li" style="width:100%;border-left:0;border-right:0;border-bottom:0;background:none;text-align:left;color:var(--ink)" data-act="editSession" data-id="' + esc(s.session_id) + '"><div class="grow"><div class="b">' + esc(splitName(s.split_id)) + (prSet[s.session_id] ? ' <span class="badge">' + prSet[s.session_id] + ' PR</span>' : '') + '</div><div class="small muted">' + esc(L.dLabel(s.date, { year: 'numeric' })) + ' · ' + Object.keys(nEx).length + ' exercises</div></div>' +
         '<div class="right"><div class="b">' + fmt(stt.load) + ' kg</div><div class="small ' + (pl && stt.load >= pl ? 'ok' : 'muted') + '">' + (pl ? pct((stt.load - pl) / pl) : '—') + '</div></div></button>';
     }).join('') + '</div>' + (list.length > (S.histN || 25) ? '<button class="pill sm soft" data-act="moreHist">Show more</button>' : '') : '<span class="small muted">No sessions yet.</span>') + '</section>';
     var del = Object.keys(S.db.WorkoutSessions).map(function (k) { return S.db.WorkoutSessions[k]; }).filter(function (s) { return s.status === 'deleted'; });
     if (del.length) h += '<details class="tile"><summary>Deleted sessions (' + del.length + ')</summary><div class="list">' + del.map(function (s) {
-      return '<div class="li"><span class="grow">' + esc(splitName(s.split_id)) + ' · ' + esc(L.dLabel(s.date)) + '</span><button class="pill sm soft" data-act="restoreSession" data-id="' + esc(s.session_id) + '">Restore</button></div>';
+      return '<div class="li"><span class="grow">' + esc(sessionLabel(c, s)) + ' · ' + esc(L.dLabel(s.date)) + '</span><button class="pill sm soft" data-act="restoreSession" data-id="' + esc(s.session_id) + '">Restore</button></div>';
     }).join('') + '</div></details>';
     return h + '</div>';
   }
@@ -1388,7 +1420,7 @@ input[type=date].field::-webkit-date-and-time-value{text-align:left}
   function vEditor(c) {
     var e = S.editor; if (!e) { S.view = 'train'; return vTrain(c); }
     var sp = activeSplits(), last = lastOfSplit(c, e.split_id, e.session_id);
-    var past = c.sessions.slice().reverse().filter(function (s) { return s.session_id !== e.session_id; }).slice(0, 60);
+    var past = c.lifts.slice().reverse().filter(function (s) { return s.session_id !== e.session_id; }).slice(0, 60);
     var h = '<header class="row" style="margin-bottom:10px"><button class="iconbtn" data-act="go" data-v="train" aria-label="Back (draft is kept)">' + icon('left') + '</button>' +
       '<div class="grow"><h1 style="font-size:24px">' + esc(splitName(e.split_id)) + '</h1><span class="small muted">' + (e.isPlan ? 'Routine plan' : e.isNew ? 'New session' : 'Editing') + ' · autosaved on this phone</span></div>' +
       '<div class="seg" role="group" aria-label="Input mode"><button data-act="mode" data-v="grid" class="' + (e.mode === 'grid' ? 'on' : '') + '">Grid</button><button data-act="mode" data-v="text" class="' + (e.mode === 'text' ? 'on' : '') + '">Text</button></div></header><div class="stack">';
@@ -1406,7 +1438,7 @@ input[type=date].field::-webkit-date-and-time-value{text-align:left}
     } else {
       var hasGhost = e.exercises.some(function (x) { return x.sets.some(function (s) { return s.gr !== undefined && s.gr !== null && s.r === ''; }); });
       if (hasGhost) h += '<button class="pill soft" data-act="acceptAll">Accept all last-session values</button>';
-      h += '<datalist id="exlist">' + Object.keys(S.db.Exercises).map(function (k) { return S.db.Exercises[k]; }).filter(function (x) { return +x.archived !== 1; }).map(function (x) { return '<option value="' + esc(x.canonical_name) + '">'; }).join('') + '</datalist>';
+      h += '<datalist id="exlist">' + Object.keys(S.db.Exercises).map(function (k) { return S.db.Exercises[k]; }).filter(function (x) { return +x.archived !== 1 && x.type !== 'activity'; }).map(function (x) { return '<option value="' + esc(x.canonical_name) + '">'; }).join('') + '</datalist>';
       h += e.exercises.map(function (x, i) { return exCard(x, i, e.exercises.length); }).join('');
       h += '<div class="row"><button class="pill ghost grow" style="height:52px" data-act="addEx">+ New exercise</button><button class="pill ghost grow" style="height:52px" data-act="addFromRoutines">+ From other routines</button></div>';
     }
@@ -1445,7 +1477,7 @@ input[type=date].field::-webkit-date-and-time-value{text-align:left}
     return errs.length ? '<div class="err">' + errs.map(esc).join('<br>') + '</div>' : '';
   }
   function lastOfSplit(c, split, excludeId) {
-    var out = null; c.sessions.forEach(function (s) { if (s.session_id !== excludeId && (s.split_id || '') === (split || '')) out = s; }); return out;
+    var out = null; c.lifts.forEach(function (s) { if (s.session_id !== excludeId && (s.split_id || '') === (split || '')) out = s; }); return out;
   }
   function committed(x) {
     return x.sets.filter(function (s) { return String(s.r).trim() !== '' && C.num(s.r) !== null && C.num(s.r) > 0; })
@@ -1566,8 +1598,8 @@ input[type=date].field::-webkit-date-and-time-value{text-align:left}
     var used = {}; Object.keys(S.db.WorkoutSets).forEach(function (k) { var x = S.db.WorkoutSets[k]; if (+x.set_no > 0) used[x.exercise_id] = (used[x.exercise_id] || 0) + 1; });
     h += sec('exercises', 'Exercises', exs.length ? '<div class="list">' + exs.map(function (x) {
       var arch = +x.archived === 1;
-      return '<div class="li wrap"><div class="grow"><div class="b' + (arch ? ' muted' : '') + '">' + esc(x.canonical_name) + '</div><div class="small muted">' + (x.type === 'bodyweight' ? 'bodyweight' : 'loaded') + ' · ' + (used[x.exercise_id] || 0) + ' sets' + (x.aliases ? ' · aka ' + esc(x.aliases) : '') + (x.merged_into ? ' · merged into ' + esc(exName(x.merged_into)) : arch ? ' · archived' : '') + '</div></div>' +
-        (x.merged_into ? '' : '<button class="iconbtn sm clear" data-act="exRenameG" data-id="' + esc(x.exercise_id) + '" aria-label="Rename">' + icon('edit', 18) + '</button><button class="pill sm soft" data-act="exTypeG" data-id="' + esc(x.exercise_id) + '">' + (x.type === 'bodyweight' ? 'Set loaded' : 'Set bodyweight') + '</button><button class="pill sm soft" data-act="exMerge" data-id="' + esc(x.exercise_id) + '">Merge…</button><button class="pill sm soft" data-act="exArchive" data-id="' + esc(x.exercise_id) + '">' + (arch ? 'Restore' : 'Archive') + '</button>') + '</div>';
+      return '<div class="li wrap"><div class="grow"><div class="b' + (arch ? ' muted' : '') + '">' + esc(x.canonical_name) + '</div><div class="small muted">' + (x.type === 'activity' ? 'activity (name only)' : (x.type === 'bodyweight' ? 'bodyweight' : 'loaded') + ' · ' + (used[x.exercise_id] || 0) + ' sets') + (x.aliases ? ' · aka ' + esc(x.aliases) : '') + (x.merged_into ? ' · merged into ' + esc(exName(x.merged_into)) : arch ? ' · archived' : '') + '</div></div>' +
+        (x.merged_into ? '' : '<button class="iconbtn sm clear" data-act="exRenameG" data-id="' + esc(x.exercise_id) + '" aria-label="Rename">' + icon('edit', 18) + '</button>' + (x.type === 'activity' ? '' : '<button class="pill sm soft" data-act="exTypeG" data-id="' + esc(x.exercise_id) + '">' + (x.type === 'bodyweight' ? 'Set loaded' : 'Set bodyweight') + '</button>') + '<button class="pill sm soft" data-act="exMerge" data-id="' + esc(x.exercise_id) + '">Merge…</button><button class="pill sm soft" data-act="exArchive" data-id="' + esc(x.exercise_id) + '">' + (arch ? 'Restore' : 'Archive') + '</button>') + '</div>';
     }).join('') + '</div>' : '<span class="small muted">Exercises are created as you log sessions or import notes.</span>');
     // Measures
     var ms = measures(false);
@@ -1602,13 +1634,13 @@ input[type=date].field::-webkit-date-and-time-value{text-align:left}
     // Tests
     var tr = S.testResults;
     h += sec('tests', 'Self-test (BRD acceptance)', '<button class="pill soft" data-act="runTests">Run tests</button>' + (tr ? '<div class="list">' + tr.map(function (r) { return '<div class="li small"><span class="b" style="width:44px;color:' + (r.pass ? 'var(--good)' : 'var(--bad)') + '">' + (r.pass ? 'PASS' : 'FAIL') + '</span><span class="grow">' + esc(r.name) + (r.detail ? '<br><span class="mono muted">' + esc(r.detail) + '</span>' : '') + '</span></div>'; }).join('') + '</div>' : ''));
-    h += '<span class="small muted" style="text-align:center;padding:8px">Lock-in v1.0 · data lives on this device and in your sheet</span>';
+    h += '<span class="small muted" style="text-align:center;padding:8px">Lock-in v1.1 · data lives on this device and in your sheet</span>';
     return h + '</div>';
   }
   function fld(id, label, value, mode, ph) { return '<div><label class="lbl" for="' + id + '">' + esc(label) + '</label><input id="' + id + '" class="field" value="' + esc(value) + '"' + (mode === 'url' ? ' type="url"' : ' inputmode="' + (mode || 'text') + '"') + (ph ? ' placeholder="' + esc(ph) + '"' : '') + ' autocomplete="off"></div>'; }
 
   window.LockinViews = { render: render, go: go, A: A, IN: IN, CH: CH, ctx: ctx, seed: seed, saveUi: saveUi, saveDraft: saveDraft, openModal: openModal, closeModal: closeModal, modalErr: modalErr, val: val,
-    splitName: splitName, exName: exName, plans: plans, stretches: stretches, activeSplits: activeSplits, measures: measures, logState: logState, calChips: calChips, emptySets: emptySets, editorFromSession: editorFromSession,
+    splitName: splitName, exName: exName, sessionLabel: sessionLabel, activityList: activityList, plans: plans, stretches: stretches, activeSplits: activeSplits, measures: measures, logState: logState, calChips: calChips, emptySets: emptySets, editorFromSession: editorFromSession,
     lastOfSplit: lastOfSplit, committed: committed, gridToText: gridToText, textToGrid: textToGrid, textErrors: textErrors, liveEditor: liveEditor };
 })();
 
@@ -1743,9 +1775,37 @@ input[type=date].field::-webkit-date-and-time-value{text-align:left}
     V.saveDraft(); V.go('editor');
   };
   A.loadPlan = function () { var p = V.plans(S.editor.split_id)[0]; if (p) loadGhosts(p); };
+  /** Name-only activity: one session with a single zero-set row (same shape as "Cable curls -"), so sync needs no new columns. */
+  function openActivity(o) {
+    var s = o.id ? S.db.WorkoutSessions[o.id] : null, c = V.ctx();
+    var name = o.name || (s ? V.sessionLabel(c, s) : ''), d = s ? s.date : (o.d || today()), note = s ? s.note || '' : '';
+    var html = '<datalist id="actlist">' + V.activityList().map(function (a) { return '<option value="' + esc(a.canonical_name) + '">'; }).join('') + '</datalist>' +
+      '<div><label class="lbl" for="m-act">Activity</label><input id="m-act" class="field" list="actlist" value="' + esc(name) + '" placeholder="e.g. Tennis, Walk" autocomplete="off"></div>' +
+      '<div><label class="lbl" for="m-date">Date</label><input id="m-date" type="date" class="field" max="' + today() + '" value="' + d + '"></div>' +
+      '<div><label class="lbl" for="m-note">Note</label><input id="m-note" class="field" value="' + esc(note) + '" placeholder="Optional, e.g. 1 hr doubles"></div>' +
+      (s ? '<button class="pill soft danger" data-act="deleteActivity" data-id="' + esc(s.session_id) + '">Delete activity</button>' : '');
+    V.openModal({ title: s ? 'Edit activity' : 'Log activity', html: html, okLabel: s ? 'Save' : 'Log activity',
+      onOk: function () {
+        var n = val('m-act').trim(), dt = val('m-date'), nt = val('m-note').trim();
+        if (!n) return V.modalErr('Name the activity.');
+        if (!C.isDate(dt) || dt > today()) return V.modalErr('Pick a date that is not in the future.');
+        var ex = C.findExercise(S.db, n);
+        if (ex && ex.type !== 'activity') return V.modalErr('“' + ex.canonical_name + '” is a tracked exercise. Use a different name, e.g. “' + n + ' (activity)”.');
+        if (!ex) ex = put('Exercises', { exercise_id: C.uid('ex'), canonical_name: n, aliases: '', type: 'activity', archived: 0, merged_into: '' });
+        L.putSession({ session_id: s ? s.session_id : C.uid('ses'), date: dt, split_id: '', note: nt, status: 'done' },
+          [{ set_id: C.uid('set'), exercise_id: ex.exercise_id, exercise_order: 1, set_no: 0, weight_kg: '', reps: '' }]);
+        S.modal = null; L.toast((s ? 'Updated ' : 'Logged ') + ex.canonical_name); render(); return true;
+      } });
+  }
+  A.logActivity = function (el) { openActivity({ name: el.dataset.name || '', d: el.dataset.d || '' }); };
+  A.deleteActivity = function (el) {
+    if (!confirm('Delete this activity? It can be restored from Train › Deleted sessions.')) return;
+    put('WorkoutSessions', { session_id: el.dataset.id, status: 'deleted' }); S.modal = null; L.toast('Activity deleted'); render();
+  };
   A.editSession = function (el) {
     var id = el.dataset.id;
     if (S.db.WorkoutSessions[id] && S.db.WorkoutSessions[id].status === 'plan') return A.editPlan(el);
+    if (V.ctx().activity[id]) return openActivity({ id: id });
     if (S.editor && S.editor.session_id === id) { V.go('editor'); return; }
     if (S.editor && hasValues(S.editor) && !confirm('Discard the session in progress?')) return;
     var s = S.db.WorkoutSessions[id], c = V.ctx();
@@ -1806,12 +1866,12 @@ input[type=date].field::-webkit-date-and-time-value{text-align:left}
     splitsOrder.concat([{ split_id: '', name: 'Blank sessions' }]).forEach(function (sp) {
       var ids = [];
       all.filter(function (x) { return (x.split_id || '') === sp.split_id; }).forEach(function (x) {
-        (c.setsBy[x.session_id] || []).forEach(function (st) { var ex = S.db.Exercises[st.exercise_id]; if (ex && !ex.merged_into && +ex.archived !== 1 && ids.indexOf(st.exercise_id) < 0) ids.push(st.exercise_id); });
+        (c.setsBy[x.session_id] || []).forEach(function (st) { var ex = S.db.Exercises[st.exercise_id]; if (ex && !ex.merged_into && +ex.archived !== 1 && ex.type !== 'activity' && ids.indexOf(st.exercise_id) < 0) ids.push(st.exercise_id); });
       });
       ids = ids.filter(function (id) { return !seen[id]; }); ids.forEach(function (id) { seen[id] = 1; });
       if (ids.length) groups.push({ name: sp.name, ids: ids });
     });
-    var rest = Object.keys(S.db.Exercises).filter(function (k) { var e = S.db.Exercises[k]; return !seen[k] && !e.merged_into && +e.archived !== 1; });
+    var rest = Object.keys(S.db.Exercises).filter(function (k) { var e = S.db.Exercises[k]; return !seen[k] && !e.merged_into && +e.archived !== 1 && e.type !== 'activity'; });
     if (rest.length) groups.push({ name: 'Other exercises', ids: rest });
     if (!groups.length) { L.toast('No exercises saved yet'); return; }
     var html = '<p class="small muted" style="margin:0">Pick any exercises to add to this session. Each comes with its last weights and reps as ghost values.</p>' + groups.map(function (g) {
